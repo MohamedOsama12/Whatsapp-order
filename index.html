@@ -30,7 +30,6 @@
             justify-content: center;
             align-items: flex-start;
             padding: 20px 10px;
-            -webkit-text-size-adjust: 100%; /* حل مشكلة تداخل النصوص في آيفون و Safari */
         }
 
         .workspace {
@@ -117,37 +116,27 @@
             width: 48%;
             vertical-align: top;
             padding: 10px;
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
-        }
-
-        /* حاوية النص الداخلية لمنع تداخل الأسطر في الآيفون */
-        .order-content {
             font-size: 13px;
-            line-height: 1.6;
+            line-height: 1.5;
             white-space: pre-line;
             direction: rtl;
             text-align: right;
             cursor: text;
-            outline: none;
-            display: block;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
         }
-
-        .order-content:hover {
+        table.orders-table td.order-cell:hover {
             background-color: #f8fafc;
-            border-radius: 4px;
-            padding: 2px 4px;
         }
-        
-        .order-content:focus {
+        table.orders-table td.order-cell:focus {
             background-color: #ffffff;
             outline: 2px solid #3b82f6;
             border-radius: 4px;
-            padding: 2px 4px;
         }
 
         table.orders-table td.divider-cell { width: 4%; border-right: 2px solid #000; padding: 0; }
         
+        /* منع تقطيع الصفوف والخلايا نهائياً بين الصفحات وتوفير حماية تامة */
         table.orders-table tr.order-row {
             border-bottom: 1px solid #e2e8f0;
             page-break-inside: avoid !important;
@@ -219,9 +208,9 @@
                 const o2 = orders[i + 1] || '';
                 htmlContent += `
                     <tr class="order-row">
-                        <td class="order-cell"><div class="order-content" contenteditable="true">${o1}</div></td>
+                        <td class="order-cell" contenteditable="true">${o1}</td>
                         <td class="divider-cell"></td>
-                        <td class="order-cell"><div class="order-content" contenteditable="true">${o2}</div></td>
+                        <td class="order-cell" contenteditable="true">${o2}</td>
                     </tr>`;
             }
             htmlContent += '</table>';
