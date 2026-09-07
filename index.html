@@ -3,171 +3,196 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام الباركود الذكي - بحث الكلمات المفتاحية</title>
+    <title>نظام الكاشير الذكي - البحث الفائق</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
-        body { font-family: 'Cairo', sans-serif; background-color: #f1f5f9; }
-        .loader { border-top-color: #4f46e5; animation: spinner 0.6s linear infinite; }
-        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .scanning-line { height: 2px; background: #10b981; position: absolute; width: 100%; top: 0; animation: scan 2s linear infinite; }
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap');
+        body { font-family: 'Cairo', sans-serif; background-color: #f8fafc; }
+        .scanning-line { height: 3px; background: #ef4444; position: absolute; width: 100%; top: 0; animation: scan 1.5s infinite; shadow: 0 0 8px red; }
         @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+        .loader { border-top-color: #6366f1; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="min-h-screen pb-10">
+<body class="min-h-screen text-slate-900">
 
-    <main class="container mx-auto px-4 py-6">
+    <main class="container mx-auto px-4 py-8">
+        
+        <!-- Section 1: Upload -->
+        <div id="upload-box" class="max-w-2xl mx-auto bg-white p-10 rounded-3xl shadow-xl text-center border-2 border-dashed border-indigo-200">
+            <i class="fa-solid fa-file-circle-plus text-6xl text-indigo-500 mb-4"></i>
+            <h1 class="text-2xl font-black mb-2">ارفع ملف المنتجات (Excel)</h1>
+            <p class="text-slate-500 mb-6">سيتم تحليل النصوص والباركود تلقائياً</p>
+            <input type="file" id="excel-input" accept=".xlsx, .xls" class="block w-full text-sm text-slate-500 file:mr-4 file:py-3 file:px-8 file:rounded-full file:border-0 file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer"/>
+        </div>
 
-        <!-- Upload Section -->
-        <section id="upload-section" class="max-w-xl mx-auto bg-white rounded-3xl shadow-2xl p-8 text-center my-10 border-4 border-indigo-50">
-            <div class="mb-6"><i class="fa-solid fa-file-excel text-6xl text-indigo-500"></i></div>
-            <h2 class="text-2xl font-bold mb-4">ارفع ملف المنتجات أولاً</h2>
-            <input type="file" id="excel-file-input" accept=".xlsx, .xls" class="block w-full text-sm text-slate-500 file:mr-4 file:py-3 file:px-6 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"/>
-        </section>
-
-        <!-- Main Dashboard -->
-        <section id="dashboard-section" class="hidden space-y-6">
+        <!-- Section 2: Main Interface -->
+        <div id="main-ui" class="hidden space-y-6">
             
-            <!-- Stats -->
-            <div class="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm">
-                <span class="text-slate-500">إجمالي المنتجات المحملة: <b id="total-count" class="text-indigo-600">0</b></span>
-                <button onclick="location.reload()" class="text-red-500 text-sm font-bold"><i class="fa-solid fa-rotate"></i> استبدال الملف</button>
+            <div class="flex justify-between items-center bg-indigo-900 text-white p-4 rounded-2xl shadow-lg">
+                <div class="flex items-center gap-3">
+                    <i class="fa-solid fa-boxes-stacked text-xl"></i>
+                    <span class="font-bold">المنتجات: <span id="count-tag">0</span></span>
+                </div>
+                <button onclick="location.reload()" class="bg-indigo-800 px-4 py-1 rounded-lg text-sm hover:bg-red-500 transition">تغيير الملف</button>
             </div>
 
-            <!-- Search Tabs -->
-            <div class="bg-white rounded-3xl shadow-lg overflow-hidden">
-                <div class="flex bg-slate-100">
-                    <button onclick="switchTab('text')" id="tab-text-btn" class="flex-1 py-4 font-bold text-indigo-600 bg-white shadow-inner">بحث يدوي</button>
-                    <button onclick="switchTab('camera')" id="tab-camera-btn" class="flex-1 py-4 font-bold text-slate-500">بحث بالكاميرا (ذكاء اصطناعي)</button>
-                </div>
-
-                <div class="p-6">
-                    <!-- Text Search -->
-                    <div id="tab-text-content">
-                        <input type="text" id="search-input" oninput="manualSearch()" placeholder="اكتب أي شيء عن المنتج..." class="w-full bg-slate-50 border-2 border-slate-200 rounded-2xl py-4 px-6 focus:border-indigo-500 outline-none transition-all">
-                    </div>
-
-                    <!-- Camera Search -->
-                    <div id="tab-camera-content" class="hidden space-y-4">
-                        <div class="relative max-w-sm mx-auto rounded-2xl overflow-hidden bg-black aspect-square">
-                            <video id="video" autoplay playsinline class="w-full h-full object-cover"></video>
-                            <div class="scanning-line"></div>
-                        </div>
-                        
-                        <!-- Progress Indicator -->
-                        <div id="ocr-loading" class="hidden">
-                            <div class="loader w-8 h-8 border-4 border-slate-200 rounded-full mx-auto"></div>
-                            <p class="text-center text-sm mt-2 text-indigo-600 font-bold" id="ocr-status">جاري استخراج الكلمات المفتاحية...</p>
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                <!-- Left: Scanner & Search -->
+                <div class="lg:col-span-7 space-y-6">
+                    <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+                        <div class="flex gap-4 mb-6">
+                            <button onclick="setMode('camera')" id="btn-camera" class="flex-1 py-3 rounded-2xl font-black bg-indigo-600 text-white shadow-md transition">الكاميرا الذكية</button>
+                            <button onclick="setMode('text')" id="btn-text" class="flex-1 py-3 rounded-2xl font-black bg-slate-100 text-slate-500 transition">بحث يدوي</button>
                         </div>
 
-                        <button onclick="captureAndAnalyze()" id="capture-btn" class="w-full bg-emerald-500 text-white py-4 rounded-2xl font-bold text-lg hover:bg-emerald-600 shadow-lg flex items-center justify-center gap-3">
-                            <i class="fa-solid fa-bolt"></i> التقاط وتحليل المنتج
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Results Section -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- List -->
-                <div class="bg-white rounded-3xl p-6 shadow-sm">
-                    <h3 class="font-bold mb-4 text-slate-700"><i class="fa-solid fa-list-ul ml-2"></i>النتائج المقترحة</h3>
-                    <div id="results-list" class="space-y-3 max-h-96 overflow-y-auto">
-                        <p class="text-slate-400 text-center py-10">بانتظار البحث أو الالتقاط...</p>
-                    </div>
-                </div>
-
-                <!-- Active Barcode -->
-                <div class="bg-white rounded-3xl p-6 shadow-lg border-2 border-indigo-100 text-center sticky top-4">
-                    <h3 class="font-bold mb-4 text-indigo-600 border-b pb-2">باركود الكاشير</h3>
-                    <div id="barcode-area" class="flex flex-col items-center py-6">
-                        <div id="empty-barcode" class="text-slate-300">
-                            <i class="fa-solid fa-barcode text-9xl"></i>
-                            <p class="mt-4">اختر منتجاً لعرض الباركود</p>
+                        <!-- Camera Interface -->
+                        <div id="camera-ui" class="space-y-4">
+                            <div class="relative max-w-md mx-auto rounded-3xl overflow-hidden shadow-2xl bg-black aspect-video">
+                                <video id="video" autoplay playsinline class="w-full h-full object-cover"></video>
+                                <div class="scanning-line"></div>
+                            </div>
+                            <button onclick="processImage()" id="scan-btn" class="w-full bg-red-500 text-white py-5 rounded-2xl font-black text-xl hover:bg-red-600 shadow-xl flex items-center justify-center gap-3">
+                                <i class="fa-solid fa-camera"></i> تحليل صورة المنتج
+                            </button>
+                            <!-- Raw Text Feedback -->
+                            <div id="raw-text-box" class="hidden p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500 font-mono text-center">
+                                النص المقروء: <span id="raw-text-content">...</span>
+                            </div>
                         </div>
-                        <div id="active-barcode" class="hidden w-full">
-                            <h2 id="display-name" class="text-xl font-black mb-1"></h2>
-                            <p id="display-code" class="text-indigo-500 font-mono font-bold mb-4"></p>
-                            <div class="bg-white p-4 inline-block border rounded-xl">
+
+                        <!-- Manual Search -->
+                        <div id="text-ui" class="hidden">
+                            <input type="text" id="manual-search" oninput="doManualSearch()" placeholder="ابحث بأي كلمة (مثلاً: هاينز مستردة)..." class="w-full p-5 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:border-indigo-500 outline-none">
+                        </div>
+
+                        <div id="loader" class="hidden py-4 text-center">
+                            <div class="loader w-10 h-10 border-4 border-slate-200 rounded-full mx-auto"></div>
+                            <p class="text-indigo-600 font-bold mt-2">جاري البحث في الشيت بصبر...</p>
+                        </div>
+                    </div>
+
+                    <!-- Results List -->
+                    <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+                        <h3 class="font-black mb-4 flex items-center gap-2"><i class="fa-solid fa-magnifying-glass text-indigo-500"></i> أقرب التطابقات:</h3>
+                        <div id="results" class="space-y-3">
+                            <div class="text-center py-10 text-slate-400">ارفع الملف وابدأ البحث أو التصوير</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Barcode Preview -->
+                <div class="lg:col-span-5">
+                    <div class="bg-white p-8 rounded-3xl shadow-2xl border-t-8 border-indigo-600 sticky top-6 text-center">
+                        <div id="no-select">
+                            <i class="fa-solid fa-barcode text-9xl text-slate-100"></i>
+                            <p class="text-slate-400 mt-4 font-bold">بانتظار اختيار منتج...</p>
+                        </div>
+                        <div id="active-card" class="hidden space-y-6">
+                            <div>
+                                <h2 id="card-name" class="text-2xl font-black text-slate-800"></h2>
+                                <p id="card-code" class="text-indigo-600 font-mono font-bold text-lg"></p>
+                            </div>
+                            <div class="bg-white p-6 border-2 border-dashed border-slate-200 rounded-3xl inline-block">
                                 <svg id="barcode-svg"></svg>
                             </div>
-                            <button onclick="window.print()" class="mt-6 w-full bg-slate-800 text-white py-3 rounded-xl font-bold hover:bg-black transition">طباعة الملصق</button>
+                            <button onclick="window.print()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-black hover:bg-black transition flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-print"></i> طباعة الملصق
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
-        </section>
+        </div>
     </main>
 
     <script>
-        let products = [];
-        let cameraStream = null;
+        let db = [];
+        let stream = null;
 
-        // 1. قراءة الملف مع تطوير استخراج الكود
-        document.getElementById('excel-file-input').addEventListener('change', function(e) {
+        // 1. تنظيف النصوص بشكل خارق (تخطي المسافات، التشكيل، اختلاف الرموز)
+        function superNormalize(str) {
+            if (!str) return "";
+            return String(str)
+                .replace(/[\u064B-\u0652]/g, "") // حذف التشكيل بالكامل
+                .replace(/[أإآ]/g, "ا")
+                .replace(/ة/g, "ه")
+                .replace(/ى/g, "ي")
+                .replace(/[^a-zA-Z0-9أ-ي]/g, " ") // استبدال أي رمز بمسافة
+                .replace(/\s+/g, " ") // دمج المسافات الزائدة
+                .toLowerCase()
+                .trim();
+        }
+
+        // 2. معالجة الإكسيل عند الرفع
+        document.getElementById('excel-input').addEventListener('change', function(e) {
             const reader = new FileReader();
             reader.onload = function(e) {
                 const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                products = [];
-
-                workbook.SheetNames.forEach(sheet => {
-                    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheet], { header: 1 });
+                const wb = XLSX.read(data, {type:'array'});
+                db = [];
+                
+                wb.SheetNames.forEach(sheet => {
+                    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheet], {header:1});
                     rows.forEach(row => {
-                        if (row.length < 1) return;
-                        let nums = row.filter(c => /^\d+$/.test(String(c)));
-                        let texts = row.filter(c => /[a-zA-Zأ-ي]/.test(String(c)));
+                        if (row.length === 0) return;
                         
-                        let code = nums.reduce((a, b) => String(a).length >= String(b).length ? a : b, '');
-                        let name = texts.reduce((a, b) => String(a).length >= String(b).length ? a : b, '');
+                        // البحث عن الكود (أطول رقم) والاسم (أطول نص)
+                        let cells = row.map(c => String(c || ""));
+                        let code = cells.filter(c => /^\d+$/.test(c)).reduce((a, b) => a.length >= b.length ? a : b, "");
+                        let name = cells.filter(c => /[a-zA-Zأ-ي]/.test(c)).reduce((a, b) => a.length >= b.length ? a : b, "");
 
-                        if (code && String(code).length > 2) {
-                            products.push({
-                                code: String(code),
-                                name: String(name || 'منتج غير مسمى'),
-                                searchField: normalizeText(row.join(' '))
+                        if (code) {
+                            db.push({
+                                code: code,
+                                name: name || "منتج غير مسمى",
+                                // حقل البحث يحتوي على كل خلايا الصف بعد التنظيف
+                                searchBag: superNormalize(cells.join(" "))
                             });
                         }
                     });
                 });
-                document.getElementById('total-count').innerText = products.length;
-                document.getElementById('upload-section').classList.add('hidden');
-                document.getElementById('dashboard-section').classList.remove('hidden');
+                document.getElementById('count-tag').innerText = db.length;
+                document.getElementById('upload-box').classList.add('hidden');
+                document.getElementById('main-ui').classList.remove('hidden');
             };
             reader.readAsArrayBuffer(e.target.files[0]);
         });
 
-        // 2. محرك البحث الذكي (Keyword Scoring)
-        function findBestMatch(ocrText) {
-            const queryWords = normalizeText(ocrText).split(/\s+/).filter(w => w.length > 2);
+        // 3. محرك البحث بالكلمات المفتاحية (Keyword Matching)
+        function smartSearch(query) {
+            const cleanQuery = superNormalize(query);
+            const queryWords = cleanQuery.split(" ").filter(w => w.length > 1); // الكلمات التي طولها أكثر من حرف
+            
             if (queryWords.length === 0) return [];
 
-            let scoredProducts = products.map(p => {
+            let scored = db.map(p => {
                 let score = 0;
                 queryWords.forEach(word => {
-                    if (p.searchField.includes(word)) {
-                        score += word.length; // الكلمات الأطول لها وزن أكبر
+                    if (p.searchBag.includes(word)) {
+                        score += 1; // زيادة النقاط عند مطابقة كلمة
                     }
                 });
                 return { ...p, score };
             });
 
-            return scoredProducts
+            return scored
                 .filter(p => p.score > 0)
                 .sort((a, b) => b.score - a.score)
-                .slice(0, 10);
+                .slice(0, 8);
         }
 
-        // 3. التقاط الصورة وتحليلها
-        async function captureAndAnalyze() {
+        // 4. معالجة الصورة بالكاميرا
+        async function processImage() {
             const video = document.getElementById('video');
-            const loader = document.getElementById('ocr-loading');
-            const status = document.getElementById('ocr-status');
-            const btn = document.getElementById('capture-btn');
+            const loader = document.getElementById('loader');
+            const btn = document.getElementById('scan-btn');
+            const rawBox = document.getElementById('raw-text-box');
 
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
@@ -176,25 +201,23 @@
 
             loader.classList.remove('hidden');
             btn.disabled = true;
-            status.innerText = "جاري قراءة النصوص من العبوة...";
 
             try {
-                // استخدام Tesseract لقراءة العربي والإنجليزي معاً
+                // استخدام Tesseract لقراءة العربي والإنجليزي
                 const result = await Tesseract.recognize(canvas, 'ara+eng');
                 const text = result.data.text;
-                console.log("Extracted Text:", text);
-
-                const matches = findBestMatch(text);
                 
-                if (matches.length > 0) {
-                    renderResults(matches);
-                    selectProduct(matches[0]); // اختيار أول نتيجة هي الأقرب تلقائياً
-                    status.innerText = "تم العثور على المنتج!";
-                } else {
-                    alert("لم نتمكن من تمييز كلمات مفتاحية كافية. حاول تقريب الكاميرا من اسم المنتج.");
-                }
+                // إظهار النص المستخرج للمستخدم للتأكد
+                rawBox.classList.remove('hidden');
+                document.getElementById('raw-text-content').innerText = text.substring(0, 50) + "...";
+
+                const matches = smartSearch(text);
+                renderResults(matches);
+                if(matches.length > 0) selectProduct(matches[0]);
+                else alert("لم يتم العثور على كلمات مطابقة في الشيت، حاول تقريب الكاميرا");
+
             } catch (err) {
-                alert("خطأ في التحليل: " + err.message);
+                alert("حدث خطأ في القراءة: " + err.message);
             } finally {
                 loader.classList.add('hidden');
                 btn.disabled = false;
@@ -202,77 +225,57 @@
         }
 
         function renderResults(list) {
-            const container = document.getElementById('results-list');
-            container.innerHTML = '';
+            const res = document.getElementById('results');
+            res.innerHTML = '';
             if (list.length === 0) {
-                container.innerHTML = '<p class="text-center py-10 text-slate-400">لا توجد نتائج مطابقة</p>';
+                res.innerHTML = '<div class="text-center py-10 text-slate-400">لا توجد نتائج مطابقة</div>';
                 return;
             }
-
             list.forEach(p => {
-                const div = document.createElement('div');
-                div.className = "p-4 border-2 border-slate-100 rounded-2xl hover:border-indigo-500 cursor-pointer transition-all flex justify-between items-center bg-slate-50 hover:bg-white";
-                div.onclick = () => selectProduct(p);
-                div.innerHTML = `
-                    <div>
-                        <h4 class="font-bold text-slate-800">${p.name}</h4>
-                        <p class="text-xs font-mono text-indigo-500">${p.code}</p>
+                const item = document.createElement('div');
+                item.className = "p-4 bg-slate-50 border-2 border-transparent hover:border-indigo-500 rounded-2xl cursor-pointer transition-all flex justify-between items-center";
+                item.onclick = () => selectProduct(p);
+                item.innerHTML = `
+                    <div class="text-right">
+                        <div class="font-black text-slate-800">${p.name}</div>
+                        <div class="text-xs text-indigo-500 font-mono font-bold">${p.code}</div>
                     </div>
-                    <i class="fa-solid fa-chevron-left text-slate-300"></i>
+                    <i class="fa-solid fa-arrow-left text-slate-300"></i>
                 `;
-                container.appendChild(div);
+                res.appendChild(item);
             });
         }
 
         function selectProduct(p) {
-            document.getElementById('empty-barcode').classList.add('hidden');
-            document.getElementById('active-barcode').classList.remove('hidden');
-            document.getElementById('display-name').innerText = p.name;
-            document.getElementById('display-code').innerText = "CODE: " + p.code;
-            
-            JsBarcode("#barcode-svg", p.code, {
-                format: "CODE128",
-                width: 2.5,
-                height: 80,
-                displayValue: false
-            });
+            document.getElementById('no-select').classList.add('hidden');
+            document.getElementById('active-card').classList.remove('hidden');
+            document.getElementById('card-name').innerText = p.name;
+            document.getElementById('card-code').innerText = p.code;
+            JsBarcode("#barcode-svg", p.code, { format:"CODE128", width:2.5, height:70, displayValue:false });
         }
 
-        function manualSearch() {
-            const query = document.getElementById('search-input').value;
-            renderResults(findBestMatch(query));
+        function doManualSearch() {
+            const val = document.getElementById('manual-search').value;
+            renderResults(smartSearch(val));
         }
 
-        function normalizeText(str) {
-            if (!str) return "";
-            return String(str)
-                .toLowerCase()
-                .replace(/[أإآ]/g, 'ا')
-                .replace(/ة/g, 'ه')
-                .replace(/ى/g, 'ي')
-                .replace(/[^a-z0-9أ-ي\s]/g, ' ')
-                .trim();
+        function setMode(m) {
+            document.getElementById('camera-ui').classList.toggle('hidden', m !== 'camera');
+            document.getElementById('text-ui').classList.toggle('hidden', m !== 'text');
+            document.getElementById('btn-camera').className = m === 'camera' ? 'flex-1 py-3 rounded-2xl font-black bg-indigo-600 text-white shadow-md' : 'flex-1 py-3 rounded-2xl font-black bg-slate-100 text-slate-500';
+            document.getElementById('btn-text').className = m === 'text' ? 'flex-1 py-3 rounded-2xl font-black bg-indigo-600 text-white shadow-md' : 'flex-1 py-3 rounded-2xl font-black bg-slate-100 text-slate-500';
+            if (m === 'camera') startCam(); else stopCam();
         }
 
-        function switchTab(tab) {
-            document.getElementById('tab-text-content').classList.toggle('hidden', tab !== 'text');
-            document.getElementById('tab-camera-content').classList.toggle('hidden', tab !== 'camera');
-            document.getElementById('tab-text-btn').className = tab === 'text' ? 'flex-1 py-4 font-bold text-indigo-600 bg-white shadow-inner' : 'flex-1 py-4 font-bold text-slate-500';
-            document.getElementById('tab-camera-btn').className = tab === 'camera' ? 'flex-1 py-4 font-bold text-indigo-600 bg-white shadow-inner' : 'flex-1 py-4 font-bold text-slate-500';
-            
-            if (tab === 'camera') startCamera(); else stopCamera();
+        async function startCam() {
+            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:'environment' }});
+            document.getElementById('video').srcObject = stream;
         }
 
-        async function startCamera() {
-            cameraStream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: 'environment', width: 1280, height: 720 } 
-            });
-            document.getElementById('video').srcObject = cameraStream;
-        }
-
-        function stopCamera() {
-            if (cameraStream) cameraStream.getTracks().forEach(t => t.stop());
+        function stopCam() {
+            if (stream) stream.getTracks().forEach(t => t.stop());
         }
     </script>
+
 </body>
 </html>
