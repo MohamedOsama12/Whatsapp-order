@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام الكاشير الذكي - نسخة المعالجة المتقدمة</title>
+    <title>نظام الكاشير الذكي - نسخة البحث المتقدم</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -11,10 +11,10 @@
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
-        body { font-family: 'Cairo', sans-serif; background-color: #f0f2f5; }
-        .scanning-focus { border: 2px solid #10b981; position: absolute; inset: 20%; border-radius: 20px; box-shadow: 0 0 0 1000px rgba(0,0,0,0.5); pointer-events: none; }
-        .scan-anim { position: absolute; width: 100%; height: 2px; background: #10b981; top: 0; animation: scanMove 2s infinite linear; }
-        @keyframes scanMove { 0% { top: 20%; } 100% { top: 80%; } }
+        body { font-family: 'Cairo', sans-serif; background-color: #f8fafc; }
+        .scanning-focus { border: 2px solid #10b981; position: absolute; inset: 15%; border-radius: 20px; box-shadow: 0 0 0 1000px rgba(0,0,0,0.4); pointer-events: none; }
+        .scan-anim { position: absolute; width: 100%; height: 3px; background: #10b981; top: 0; animation: scanMove 2s infinite linear; box-shadow: 0 0 15px #10b981; }
+        @keyframes scanMove { 0% { top: 15%; } 100% { top: 85%; } }
         .loader { border-top-color: #6366f1; animation: spin 0.8s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
@@ -23,87 +23,82 @@
 
     <main class="container mx-auto px-4 py-6 max-w-4xl">
         
-        <!-- Header Section -->
-        <div id="upload-zone" class="bg-white p-8 rounded-3xl shadow-xl text-center border-4 border-dashed border-indigo-100 mb-8">
+        <!-- منطقة رفع الملف -->
+        <div id="upload-zone" class="bg-white p-10 rounded-3xl shadow-xl text-center border-4 border-dashed border-indigo-100 mb-8">
             <div class="bg-indigo-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <i class="fa-solid fa-cloud-arrow-up text-3xl text-indigo-600"></i>
+                <i class="fa-solid fa-file-excel text-3xl text-indigo-600"></i>
             </div>
-            <h1 class="text-2xl font-black text-slate-800 mb-2">نظام إدارة المنتجات الذكي</h1>
-            <p class="text-slate-500 mb-6">ارفع ملف الإكسيل لبدء البيع الذكي</p>
+            <h1 class="text-2xl font-black text-slate-800 mb-2">نظام البحث الذكي عن المنتجات</h1>
+            <p class="text-slate-500 mb-6">ارفع ملف الإكسيل الذي يحتوي على أسماء المنتجات والباركود</p>
             <input type="file" id="file-input" accept=".xlsx, .xls" class="block w-full text-sm text-slate-500 file:bg-indigo-600 file:text-white file:px-6 file:py-3 file:rounded-full file:border-0 file:cursor-pointer hover:file:bg-indigo-700 transition"/>
         </div>
 
-        <!-- Dashboard -->
+        <!-- لوحة التحكم -->
         <div id="dashboard" class="hidden space-y-6">
             
-            <!-- Top Bar -->
             <div class="bg-indigo-600 text-white p-4 rounded-2xl flex justify-between items-center shadow-lg">
                 <div class="flex items-center gap-3">
                     <i class="fa-solid fa-database"></i>
-                    <span class="font-bold">قاعدة البيانات: <span id="db-count">0</span> منتج</span>
+                    <span class="font-bold">المخزن: <span id="db-count">0</span> منتج</span>
                 </div>
-                <button onclick="location.reload()" class="bg-white/20 hover:bg-white/30 px-4 py-1 rounded-lg text-sm transition">ملف جديد</button>
+                <button onclick="location.reload()" class="bg-white/20 hover:bg-white/30 px-4 py-1 rounded-lg text-sm">تغيير الملف</button>
             </div>
 
-            <!-- Scanner Section -->
             <div class="bg-white rounded-3xl shadow-xl overflow-hidden">
                 <div class="flex bg-slate-100 p-2">
-                    <button onclick="setTab('cam')" id="tab-cam" class="flex-1 py-3 rounded-xl font-bold bg-white shadow text-indigo-600">الكاميرا الذكية</button>
+                    <button onclick="setTab('cam')" id="tab-cam" class="flex-1 py-3 rounded-xl font-bold bg-white shadow text-indigo-600">المسح الضوئي (كاميرا)</button>
                     <button onclick="setTab('manual')" id="tab-manual" class="flex-1 py-3 rounded-xl font-bold text-slate-500">بحث يدوي</button>
                 </div>
 
                 <div class="p-6">
                     <div id="cam-view" class="space-y-4">
-                        <div class="relative max-w-md mx-auto aspect-square bg-black rounded-3xl overflow-hidden shadow-inner">
+                        <div class="relative max-w-md mx-auto aspect-square bg-black rounded-3xl overflow-hidden shadow-2xl">
                             <video id="video" autoplay playsinline class="w-full h-full object-cover"></video>
                             <div class="scanning-focus">
                                 <div class="scan-anim"></div>
                             </div>
                         </div>
-                        <button onclick="captureAndOCR()" id="action-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-5 rounded-2xl font-black text-xl shadow-xl transition-all flex items-center justify-center gap-4">
-                            <i class="fa-solid fa-expand"></i> تحليل المنتج الآن
+                        <button onclick="captureAndOCR()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-5 rounded-2xl font-black text-xl shadow-xl transition-all flex items-center justify-center gap-4">
+                            <i class="fa-solid fa-camera"></i> تحليل المنتج الآن
                         </button>
                         
-                        <!-- Processing Loader -->
                         <div id="loading" class="hidden text-center py-4 bg-indigo-50 rounded-2xl border-2 border-indigo-100">
                             <div class="loader w-8 h-8 border-4 border-slate-200 rounded-full mx-auto mb-2"></div>
-                            <p class="text-indigo-700 font-bold animate-pulse">جاري تحسين جودة الصورة وقراءة النص...</p>
+                            <p class="text-indigo-700 font-bold animate-pulse">جاري تفكيك الكلمات والبحث في القاعدة...</p>
                         </div>
 
-                        <!-- Result Log (For Debugging) -->
-                        <div id="debug-text" class="p-3 bg-slate-50 rounded-xl text-center text-xs font-mono text-slate-400 border border-dashed">
-                            سيظهر النص المستخرج هنا للمراجعة
+                        <div id="debug-text" class="p-3 bg-slate-800 text-green-400 rounded-xl text-center text-xs font-mono overflow-hidden">
+                            النص المستخرج سيظهر هنا...
                         </div>
                     </div>
 
                     <div id="manual-view" class="hidden">
-                        <input type="text" id="manual-input" oninput="manualSearch()" placeholder="ابحث باسم المنتج أو الباركود..." class="w-full p-5 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:border-indigo-500 outline-none transition-all">
+                        <input type="text" id="manual-input" oninput="manualSearch()" placeholder="اكتب اسم المنتج أو الماركة..." class="w-full p-5 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:border-indigo-500 outline-none">
                     </div>
                 </div>
             </div>
 
-            <!-- Results & Preview -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Matches -->
+                <!-- قائمة النتائج -->
                 <div class="bg-white p-6 rounded-3xl shadow-md border border-slate-100">
-                    <h3 class="font-black text-slate-700 mb-4 flex items-center gap-2"><i class="fa-solid fa-list-check text-emerald-500"></i> أقرب التطابقات:</h3>
-                    <div id="results-list" class="space-y-3 min-h-[100px]">
-                        <p class="text-slate-400 text-center py-6">بانتظار التحليل...</p>
+                    <h3 class="font-black text-slate-700 mb-4 flex items-center gap-2"><i class="fa-solid fa-magnifying-glass text-indigo-500"></i> أفضل المطابقات:</h3>
+                    <div id="results-list" class="space-y-3 min-h-[150px]">
+                        <p class="text-slate-400 text-center py-10">وجه الكاميرا واضغط "تحليل"</p>
                     </div>
                 </div>
 
-                <!-- Preview -->
+                <!-- معاينة الملصق -->
                 <div class="bg-white p-6 rounded-3xl shadow-xl border-t-8 border-indigo-600 text-center flex flex-col justify-center items-center">
                     <div id="card-empty" class="text-slate-200 py-10">
-                        <i class="fa-solid fa-barcode text-8xl"></i>
+                        <i class="fa-solid fa-barcode text-9xl"></i>
                     </div>
                     <div id="card-content" class="hidden w-full space-y-4">
-                        <h2 id="view-name" class="text-2xl font-black text-slate-800 leading-tight"></h2>
+                        <h2 id="view-name" class="text-2xl font-black text-slate-800"></h2>
                         <p id="view-code" class="font-mono text-indigo-600 font-bold bg-indigo-50 px-4 py-1 rounded-full inline-block"></p>
-                        <div class="p-4 bg-white border border-slate-100 rounded-2xl shadow-inner">
+                        <div class="p-4 bg-white border border-slate-100 rounded-2xl">
                             <svg id="barcode-svg" class="mx-auto"></svg>
                         </div>
-                        <button onclick="window.print()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-black transition">
+                        <button onclick="window.print()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2">
                             <i class="fa-solid fa-print"></i> طباعة الملصق
                         </button>
                     </div>
@@ -116,15 +111,18 @@
         let products = [];
         let camStream = null;
 
-        // 1. نظام المعالجة والبحث (نفس المنطق القوي السابق)
+        // 1. تنظيف وتوحيد النصوص (للغة العربية والإنجليزية)
         function normalize(str) {
             if (!str) return "";
             return String(str).toLowerCase().trim()
-                .replace(/[أإآ]/g, "ا").replace(/ة/g, "ه").replace(/ى/g, "ي")
-                .replace(/[^a-z0-9أ-ي\s]/g, " ").replace(/\s+/g, " ");
+                .replace(/[أإآ]/g, "ا")
+                .replace(/ة/g, "ه")
+                .replace(/ى/g, "ي")
+                .replace(/[^a-z0-9أ-ي\s]/g, " ") // حذف الرموز الغريبة
+                .replace(/\s+/g, " "); // توحيد المسافات
         }
 
-        // 2. معالجة الإكسيل
+        // 2. معالجة ملف الإكسيل
         document.getElementById('file-input').addEventListener('change', function(e) {
             const reader = new FileReader();
             reader.onload = function(e) {
@@ -135,9 +133,17 @@
                     const rows = XLSX.utils.sheet_to_json(wb.Sheets[sh], {header:1});
                     rows.forEach(row => {
                         let cells = row.map(c => String(c || ""));
-                        let code = cells.filter(c => /^\d{5,}$/.test(c)).reduce((a, b) => a.length >= b.length ? a : b, "");
+                        // محاولة إيجاد الباركود (أطول رقم في الصف) والاسم
+                        let code = cells.filter(c => /^\d+$/.test(c)).reduce((a, b) => a.length >= b.length ? a : b, "");
                         let name = cells.filter(c => /[a-zA-Zأ-ي]/.test(c)).reduce((a, b) => a.length >= b.length ? a : b, "");
-                        if(code) products.push({ code, name, searchBag: normalize(cells.join(" ")) });
+                        
+                        if(code && name) {
+                            products.push({ 
+                                code, 
+                                name, 
+                                searchBag: normalize(cells.join(" ")) // كل البيانات للبحث فيها
+                            });
+                        }
                     });
                 });
                 document.getElementById('db-count').innerText = products.length;
@@ -148,21 +154,34 @@
             reader.readAsArrayBuffer(e.target.files[0]);
         });
 
-        // 3. تحسين الصورة (Image Pre-processing) - السر الحقيقي للدقة
-        function preprocessImage(canvas) {
-            const ctx = canvas.getContext('2d');
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const data = imageData.data;
+        // 3. المحرك الذكي للبحث (تجزئة النص + نظام النقاط)
+        function smartSearch(rawText) {
+            const cleanText = normalize(rawText);
+            // تقسيم النص المستخرج إلى كلمات، واستبعاد الكلمات التي طولها أقل من 3 حروف (أخطاء الـ OCR غالباً)
+            const keywords = cleanText.split(" ").filter(word => word.length >= 3);
             
-            // تحويل لأبيض وأسود وزيادة التباين
-            for (let i = 0; i < data.length; i += 4) {
-                const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
-                // عتبة التباين (Thresholding)
-                const val = avg > 128 ? 255 : 0; 
-                data[i] = data[i+1] = data[i+2] = val;
-            }
-            ctx.putImageData(imageData, 0, 0);
-            return canvas;
+            if (keywords.length === 0) return [];
+
+            let results = products.map(product => {
+                let score = 0;
+                let matches = [];
+
+                keywords.forEach(keyword => {
+                    if (product.searchBag.includes(keyword)) {
+                        // كلما كانت الكلمة أطول، زادت أهميتها في البحث
+                        score += (keyword.length * 10);
+                        matches.push(keyword);
+                    }
+                });
+
+                return { ...product, score, matches };
+            });
+
+            // فلترة المنتجات التي لم يتطابق معها أي كلمة، ثم الترتيب حسب النقاط
+            return results
+                .filter(p => p.score > 0)
+                .sort((a, b) => b.score - a.score)
+                .slice(0, 6);
         }
 
         // 4. تحليل الصورة (OCR)
@@ -171,63 +190,57 @@
             const loader = document.getElementById('loading');
             const debug = document.getElementById('debug-text');
             
+            // إنشاء كانفاس لالتقاط الصورة بجودة عالية
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d');
-            
-            // التقاط الجزء اللي داخل المربع فقط لزيادة الدقة
             ctx.drawImage(video, 0, 0);
-            preprocessImage(canvas); // تشغيل الفلتر
 
             loader.classList.remove('hidden');
-            debug.innerText = "جاري المعالجة الرقمية...";
 
             try {
-                // ضبط المحرك للغة العربية والإنجليزية مع PSM 11 (للنصوص المتفرقة)
-                const result = await Tesseract.recognize(canvas, 'ara+eng', {
-                    logger: m => console.log(m.status),
-                    errorHandler: e => console.error(e)
-                });
-
-                // تنظيف النص المستخرج من القمامة الرقمية
+                // تشغيل OCR للغتين العربية والإنجليزية
+                const result = await Tesseract.recognize(canvas, 'ara+eng');
                 const rawText = result.data.text;
-                const cleanText = rawText.replace(/[^\w\sأ-ي]/g, ' ').replace(/\s+/g, ' ');
-                debug.innerText = "النص المقروء: " + cleanText.substring(0, 60);
+                
+                debug.innerText = "النص المقروء: " + rawText.replace(/\n/g, " ");
 
-                const matches = search(cleanText);
+                // البحث باستخدام النظام الجديد
+                const matches = smartSearch(rawText);
                 renderResults(matches);
-                if(matches.length > 0) selectProduct(matches[0]);
-                else alert("لم يتم العثور على منتج مطابق بوضوح. حاول تقريب العبوة من المربع الأخضر.");
+
+                if(matches.length > 0) {
+                    selectProduct(matches[0]);
+                } else {
+                    alert("لم يتم التعثور على كلمات مطابقة بوضوح. حاول تقريب الكاميرا من اسم المنتج.");
+                }
 
             } catch (err) {
-                alert("خطأ: " + err.message);
+                console.error("OCR Error:", err);
             } finally {
                 loader.classList.add('hidden');
             }
         }
 
-        function search(query) {
-            const words = normalize(query).split(" ").filter(w => w.length > 2);
-            if (words.length === 0) return [];
-
-            return products.map(p => {
-                let score = 0;
-                words.forEach(w => {
-                    if (p.searchBag.includes(w)) score += (w.length * 2); // الكلمات الأطول تعطي نقاطاً أكثر
-                });
-                return { ...p, score };
-            }).filter(p => p.score > 0).sort((a, b) => b.score - a.score).slice(0, 6);
-        }
-
         function renderResults(list) {
             const container = document.getElementById('results-list');
             container.innerHTML = list.length ? '' : '<p class="text-slate-400 text-center py-6">لا توجد نتائج مطابقة</p>';
+            
             list.forEach(p => {
                 const div = document.createElement('div');
-                div.className = "p-4 bg-slate-50 border-2 border-transparent hover:border-indigo-500 rounded-2xl cursor-pointer transition-all flex justify-between items-center";
+                div.className = "p-4 bg-slate-50 border-2 border-transparent hover:border-indigo-500 rounded-2xl cursor-pointer transition-all flex justify-between items-center group";
                 div.onclick = () => selectProduct(p);
-                div.innerHTML = `<div><h4 class="font-black text-slate-800">${p.name}</h4><p class="text-xs font-mono text-indigo-500">${p.code}</p></div><i class="fa-solid fa-chevron-left text-slate-300"></i>`;
+                div.innerHTML = `
+                    <div class="flex-1">
+                        <h4 class="font-black text-slate-800 group-hover:text-indigo-600 transition">${p.name}</h4>
+                        <div class="flex gap-2 mt-1">
+                            <span class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">دقة: ${p.score}</span>
+                            <span class="text-[10px] font-mono text-slate-400">${p.code}</span>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-circle-check text-slate-200 group-hover:text-indigo-500 text-xl"></i>
+                `;
                 container.appendChild(div);
             });
         }
@@ -237,12 +250,23 @@
             document.getElementById('card-content').classList.remove('hidden');
             document.getElementById('view-name').innerText = p.name;
             document.getElementById('view-code').innerText = p.code;
-            JsBarcode("#barcode-svg", p.code, { format:"CODE128", width:2.5, height:80, displayValue:false });
+            
+            JsBarcode("#barcode-svg", p.code, {
+                format: "CODE128",
+                width: 2.5,
+                height: 70,
+                displayValue: false,
+                margin: 0
+            });
         }
 
         function startCamera() {
-            navigator.mediaDevices.getUserMedia({ video: { facingMode:'environment', width: 1280, height: 720 } })
-                .then(s => { camStream = s; document.getElementById('video').srcObject = s; });
+            navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } 
+            }).then(s => { 
+                camStream = s; 
+                document.getElementById('video').srcObject = s; 
+            }).catch(err => alert("يرجى السماح بالوصول للكاميرا"));
         }
 
         function setTab(t) {
@@ -254,7 +278,7 @@
         
         function manualSearch() {
             const val = document.getElementById('manual-input').value;
-            renderResults(search(val));
+            if(val.length > 2) renderResults(smartSearch(val));
         }
     </script>
 </body>
