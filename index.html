@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" class="light">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Retail Manager Pro | Smart Inventory & Labeling</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Retail Manager Pro | Smart Inventory</title>
     
     <!-- CDNs -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -11,164 +11,277 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
 
+    <script>
+        // Tailwind Configuration for Dark Mode
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: '#0f172a',
+                        darkCard: '#1e293b'
+                    }
+                }
+            }
+        }
+    </script>
+
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+Arabic:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;600;700&display=swap');
         
-        body { font-family: 'Inter', 'Noto Sans Arabic', sans-serif; background-color: #f8fafc; }
+        body { 
+            font-family: 'Noto Sans Arabic', sans-serif; 
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
         
-        .glass-morphism {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(226, 232, 240, 1);
+        /* Glassmorphism Classes */
+        .glass {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .dark .glass {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        /* Label Printing Styles (40mm x 30mm) */
+        /* Prevent zooming on inputs in iOS */
+        input { font-size: 16px !important; }
+
+        /* Responsive Print Styles */
         @media print {
             body * { visibility: hidden; }
             #printSection, #printSection * { visibility: visible; }
             #printSection {
-                position: absolute;
-                left: 0; top: 0;
-                width: 40mm;
-                height: 30mm;
-                padding: 2mm;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                background: white;
+                position: fixed; left: 0; top: 0; width: 40mm; height: 30mm;
+                display: flex; flex-direction: column; align-items: center; justify-content: center;
+                background: white !important; color: black !important;
             }
             @page { size: 40mm 30mm; margin: 0; }
         }
 
-        .search-suggestion:hover { background-color: #f1f5f9; cursor: pointer; }
-        .tab-active { border-bottom: 3px solid #3b82f6; color: #3b82f6; }
-        
-        #video-preview { transform: scaleX(-1); } /* Mirror for front camera */
+        .active-tab {
+            @apply border-b-4 border-blue-500 text-blue-600 dark:text-blue-400;
+        }
+
+        /* Hide scrollbars but keep functionality */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="text-slate-800">
+<body class="bg-slate-50 text-slate-900 dark:bg-darkBg dark:text-slate-100 min-h-screen pb-20 lg:pb-0">
 
     <!-- Navigation Header -->
-    <nav class="glass-morphism sticky top-0 z-50 px-6 py-4 shadow-sm flex justify-between items-center">
-        <h1 class="text-xl font-bold text-blue-600">Retail<span class="text-slate-500">Manager</span></h1>
-        <div class="flex gap-4" id="main-tabs">
-            <button onclick="switchTab('import')" class="tab-btn tab-active px-3 py-1 font-medium">Data Import</button>
-            <button onclick="switchTab('search')" class="tab-btn px-3 py-1 font-medium">Cashier Search</button>
-            <button onclick="switchTab('ocr')" class="tab-btn px-3 py-1 font-medium">OCR Scanner</button>
+    <nav class="glass sticky top-0 z-50 px-4 py-3 lg:px-8 shadow-sm flex flex-wrap justify-between items-center gap-4">
+        <div class="flex items-center gap-2">
+            <div class="p-2 bg-blue-600 rounded-lg">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+            </div>
+            <h1 class="text-xl font-bold hidden sm:block">Retail<span class="text-blue-600">Manager</span></h1>
         </div>
-        <div id="status-indicator" class="flex items-center gap-2 text-xs font-semibold text-red-500">
-            <span class="w-2 h-2 rounded-full bg-red-500"></span> Database Offline
+
+        <!-- Desktop Tabs -->
+        <div class="hidden lg:flex gap-6 overflow-x-auto no-scrollbar" id="nav-tabs">
+            <button onclick="switchTab('import')" class="tab-btn active-tab font-bold py-2 px-1">Import</button>
+            <button onclick="switchTab('search')" class="tab-btn font-bold py-2 px-1 text-slate-500">Cashier</button>
+            <button onclick="switchTab('ocr')" class="tab-btn font-bold py-2 px-1 text-slate-500">Vision OCR</button>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <!-- Theme Toggle -->
+            <button id="theme-toggle" class="p-2.5 rounded-xl bg-slate-200 dark:bg-slate-700 hover:ring-2 ring-blue-400 transition-all">
+                <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+                <svg id="theme-toggle-light-icon" class="hidden w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"></path></svg>
+            </button>
+            <div id="status-dot" class="w-3 h-3 rounded-full bg-red-500 animate-pulse"></div>
         </div>
     </nav>
 
-    <main class="max-w-6xl mx-auto p-6">
+    <!-- Mobile Navigation Bar (Bottom) -->
+    <div class="lg:hidden fixed bottom-0 left-0 right-0 glass border-t dark:border-slate-700 z-50 flex justify-around p-2">
+        <button onclick="switchTab('import')" class="flex flex-col items-center p-2 text-blue-500">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+            <span class="text-[10px]">Data</span>
+        </button>
+        <button onclick="switchTab('search')" class="flex flex-col items-center p-2">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            <span class="text-[10px]">Search</span>
+        </button>
+        <button onclick="switchTab('ocr')" class="flex flex-col items-center p-2">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path></svg>
+            <span class="text-[10px]">Vision</span>
+        </button>
+    </div>
 
-        <!-- 1. IMPORT SECTION -->
-        <section id="tab-import" class="tab-content block">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="md:col-span-2 glass-morphism p-8 rounded-2xl shadow-sm border-2 border-dashed border-blue-200 text-center">
-                    <input type="file" id="excel-upload" accept=".xlsx, .xls" class="hidden">
-                    <label for="excel-upload" class="cursor-pointer block">
-                        <svg class="mx-auto h-12 w-12 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                        <p class="mt-4 text-lg font-semibold">Upload Master Inventory Excel</p>
-                        <p class="text-sm text-slate-500">Expected Sheets: "Active List ", "Delist ", "Not for sale "</p>
-                    </label>
+    <main class="p-4 lg:p-8 max-w-7xl mx-auto">
+        
+        <!-- SECTION 1: IMPORT -->
+        <section id="tab-import" class="tab-content block animate-fade-in">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="bg-white dark:bg-darkCard p-8 rounded-3xl shadow-xl border-2 border-dashed border-blue-200 dark:border-slate-700 text-center">
+                        <input type="file" id="excel-upload" class="hidden" accept=".xlsx, .xls">
+                        <label for="excel-upload" class="cursor-pointer block group">
+                            <div class="w-20 h-20 bg-blue-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                                <svg class="w-10 h-10 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            </div>
+                            <h2 class="text-xl font-bold mb-2">Import Inventory File</h2>
+                            <p class="text-slate-500 text-sm">Click to upload the Excel spreadsheet containing Active, Delist, and NFS sheets.</p>
+                        </label>
+                    </div>
                 </div>
-                <div class="glass-morphism p-6 rounded-2xl">
-                    <h3 class="font-bold mb-4 border-bottom pb-2">Live Statistics</h3>
-                    <div id="stats-container" class="space-y-3">
-                        <p class="flex justify-between text-sm"><span>Total Products:</span> <span id="stat-total" class="font-bold">0</span></p>
-                        <hr>
-                        <p class="flex justify-between text-sm text-green-600"><span>Active List:</span> <span id="stat-active">0</span></p>
-                        <p class="flex justify-between text-sm text-orange-600"><span>Delist:</span> <span id="stat-delist">0</span></p>
-                        <p class="flex justify-between text-sm text-red-600"><span>Not for sale:</span> <span id="stat-nfs">0</span></p>
+                
+                <!-- Stats Dashboard -->
+                <div class="bg-white dark:bg-darkCard p-6 rounded-3xl shadow-lg border border-slate-100 dark:border-slate-700">
+                    <h3 class="text-lg font-bold mb-6 border-b dark:border-slate-700 pb-2">Inventory Overview</h3>
+                    <div class="space-y-4">
+                        <div class="flex justify-between p-3 bg-blue-50 dark:bg-slate-800 rounded-2xl">
+                            <span class="font-medium">Total Items</span>
+                            <span id="stat-total" class="font-bold text-blue-600">0</span>
+                        </div>
+                        <div class="flex justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-2xl">
+                            <span class="font-medium">Active</span>
+                            <span id="stat-active" class="font-bold text-green-600">0</span>
+                        </div>
+                        <div class="flex justify-between p-3 bg-orange-50 dark:bg-orange-900/20 rounded-2xl">
+                            <span class="font-medium">Delisted</span>
+                            <span id="stat-delist" class="font-bold text-orange-600">0</span>
+                        </div>
+                        <div class="flex justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-2xl">
+                            <span class="font-medium">Not for Sale</span>
+                            <span id="stat-nfs" class="font-bold text-red-600">0</span>
+                        </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- 2. CASHIER SEARCH SECTION -->
-        <section id="tab-search" class="tab-content hidden">
+        <!-- SECTION 2: SEARCH -->
+        <section id="tab-search" class="tab-content hidden animate-fade-in">
             <div class="max-w-3xl mx-auto space-y-6">
-                <div class="relative">
-                    <input type="text" id="product-search-input" placeholder="Search by Name (Arabic/English) or Material Code..." 
-                           class="w-full p-4 pr-12 rounded-xl border-2 border-blue-100 focus:border-blue-500 focus:ring-0 outline-none text-lg">
-                    <div id="search-results" class="absolute w-full mt-2 glass-morphism rounded-xl shadow-xl max-h-80 overflow-y-auto hidden z-50">
-                        <!-- Results injected here -->
+                <!-- Large Search Box -->
+                <div class="relative group">
+                    <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                        <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+                    <input type="text" id="product-search-input" 
+                           placeholder="Search by Product Name or Code..." 
+                           class="w-full h-16 pr-12 pl-4 rounded-2xl bg-white dark:bg-darkCard border-2 border-transparent focus:border-blue-500 shadow-lg outline-none transition-all text-lg font-medium">
+                    
+                    <div id="search-results" class="absolute w-full mt-2 bg-white dark:bg-darkCard rounded-2xl shadow-2xl max-h-[60vh] overflow-y-auto hidden z-50 border border-slate-100 dark:border-slate-700">
+                        <!-- Search results injected here -->
                     </div>
                 </div>
 
-                <!-- Product Display Card -->
-                <div id="product-card" class="hidden glass-morphism p-8 rounded-3xl shadow-lg border-t-4 border-blue-500 animate-fade-in">
-                    <div class="flex flex-col md:flex-row justify-between gap-8">
-                        <div class="flex-1 space-y-4 text-right">
-                            <h2 id="view-title-ar" class="text-3xl font-bold text-slate-800"></h2>
-                            <p id="view-title-en" class="text-xl text-slate-500 italic"></p>
-                            <div class="grid grid-cols-2 gap-4 pt-4">
-                                <div class="bg-slate-50 p-3 rounded-lg"><span class="block text-xs text-slate-400">Material Code</span><span id="view-code" class="font-mono font-bold"></span></div>
-                                <div class="bg-slate-50 p-3 rounded-lg"><span class="block text-xs text-slate-400">Package</span><span id="view-pkg" class="font-bold"></span></div>
-                                <div class="bg-slate-50 p-3 rounded-lg"><span class="block text-xs text-slate-400">Group</span><span id="view-group" class="font-bold"></span></div>
-                                <div class="bg-slate-50 p-3 rounded-lg"><span class="block text-xs text-slate-400">Status</span><span id="view-status" class="font-bold"></span></div>
+                <!-- Expanded Product Card -->
+                <div id="product-card" class="hidden animate-slide-up">
+                    <div class="bg-white dark:bg-darkCard rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100 dark:border-slate-800">
+                        <div class="p-6 lg:p-10 flex flex-col lg:flex-row gap-8">
+                            <div class="flex-1 space-y-6 text-right">
+                                <div>
+                                    <h2 id="view-title-ar" class="text-3xl lg:text-4xl font-bold text-slate-800 dark:text-white mb-2 leading-tight"></h2>
+                                    <p id="view-title-en" class="text-xl text-slate-400 italic"></p>
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div class="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl">
+                                        <span class="block text-xs text-slate-400 uppercase tracking-wider mb-1">Material ID</span>
+                                        <span id="view-code" class="font-bold text-lg"></span>
+                                    </div>
+                                    <div class="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl">
+                                        <span class="block text-xs text-slate-400 uppercase tracking-wider mb-1">Status</span>
+                                        <span id="view-status" class="font-bold text-lg text-blue-600"></span>
+                                    </div>
+                                    <div class="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl">
+                                        <span class="block text-xs text-slate-400 uppercase tracking-wider mb-1">Package Size</span>
+                                        <span id="view-pkg" class="font-bold"></span>
+                                    </div>
+                                    <div class="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl">
+                                        <span class="block text-xs text-slate-400 uppercase tracking-wider mb-1">Group Code</span>
+                                        <span id="view-group" class="font-bold"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="lg:w-72 bg-slate-50 dark:bg-slate-800/30 rounded-3xl p-6 flex flex-col items-center justify-center border border-dashed border-slate-200 dark:border-slate-700">
+                                <div class="bg-white p-4 rounded-xl shadow-inner mb-6">
+                                    <svg id="barcode-display" class="max-w-full"></svg>
+                                </div>
+                                <button onclick="window.print()" class="w-full bg-blue-600 hover:bg-blue-700 text-white h-14 rounded-2xl font-bold text-lg transition-transform active:scale-95 flex items-center justify-center gap-2">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                                    طباعة الملصق
+                                </button>
                             </div>
                         </div>
-                        <div class="flex flex-col items-center justify-center p-6 bg-white rounded-2xl border">
-                            <svg id="barcode-display"></svg>
-                            <button onclick="window.print()" class="mt-6 bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg">Print Label</button>
-                        </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- 3. OCR SCANNER SECTION -->
-        <section id="tab-ocr" class="tab-content hidden">
-            <div class="max-w-2xl mx-auto flex flex-col items-center">
-                <div id="camera-container" class="relative rounded-2xl overflow-hidden bg-black w-full aspect-video shadow-2xl mb-6">
+        <!-- SECTION 3: VISION OCR -->
+        <section id="tab-ocr" class="tab-content hidden animate-fade-in">
+            <div class="max-w-2xl mx-auto space-y-6">
+                <div class="bg-black rounded-[2rem] overflow-hidden relative aspect-video shadow-2xl border-4 border-white dark:border-slate-800">
                     <video id="video-preview" class="w-full h-full object-cover" autoplay playsinline></video>
-                    <div class="absolute inset-0 border-2 border-white/30 pointer-events-none flex items-center justify-center">
-                        <div class="w-64 h-32 border-2 border-yellow-400 rounded-lg"></div>
-                    </div>
+                    <div class="absolute inset-0 border-[3px] border-dashed border-blue-400/50 m-12 pointer-events-none rounded-xl"></div>
+                    <div id="scan-line" class="absolute top-0 left-0 w-full h-1 bg-blue-500 shadow-[0_0_15px_blue] hidden"></div>
                 </div>
                 
                 <div class="flex gap-4">
-                    <button id="start-camera" class="bg-slate-800 text-white px-6 py-3 rounded-xl font-bold">Open Camera</button>
-                    <button id="capture-ocr" class="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold">Scan Label Text</button>
+                    <button id="start-camera" class="flex-1 h-16 bg-slate-800 dark:bg-slate-700 text-white rounded-2xl font-bold active:scale-95 transition-all">فتح الكاميرا</button>
+                    <button id="capture-ocr" class="flex-[2] h-16 bg-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-500/30 active:scale-95 transition-all">بدأ المسح الذكي</button>
                 </div>
 
-                <div id="ocr-loading" class="hidden mt-4 text-blue-600 font-bold animate-pulse">Processing Intelligence Match...</div>
-                
-                <div id="ocr-results" class="w-full mt-8 space-y-4">
-                    <!-- Ranked OCR matches appear here -->
+                <div id="ocr-loader" class="hidden text-center py-4">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div>
+                    <p class="mt-2 font-bold text-blue-600">جاري تحليل النص ومطابقة البيانات...</p>
                 </div>
+
+                <div id="ocr-results" class="space-y-3"></div>
             </div>
         </section>
 
     </main>
 
-    <!-- Hidden Print Template -->
+    <!-- Label Print View -->
     <div id="printSection" class="hidden">
-        <div style="font-size: 10pt; font-weight: bold; text-align: center; width: 100%;" id="print-name-ar"></div>
-        <div style="font-size: 7pt; text-align: center; margin-bottom: 2mm;" id="print-name-en"></div>
+        <div style="font-size: 11pt; font-weight: bold; text-align: center; width: 100%; overflow: hidden; white-space: nowrap;" id="print-name-ar"></div>
+        <div style="font-size: 8pt; text-align: center; margin-bottom: 2mm;" id="print-name-en"></div>
         <svg id="print-barcode"></svg>
-        <div style="font-size: 8pt; font-weight: bold; margin-top: 1mm;" id="print-meta"></div>
+        <div style="font-size: 9pt; font-weight: bold; margin-top: 1mm;" id="print-meta"></div>
     </div>
 
     <script>
-        /** 
-         * STATE MANAGEMENT 
+        /**
+         * CORE STATE & PERSISTENCE
          */
         let masterDatabase = [];
-        let stats = { active: 0, delist: 0, nfs: 0 };
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const darkIcon = document.getElementById('theme-toggle-dark-icon');
+        const lightIcon = document.getElementById('theme-toggle-light-icon');
+
+        // Theme Initialization
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+            lightIcon.classList.remove('hidden');
+        } else {
+            document.documentElement.classList.remove('dark');
+            darkIcon.classList.remove('hidden');
+        }
+
+        themeToggleBtn.addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+            const isDark = document.documentElement.classList.contains('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            darkIcon.classList.toggle('hidden');
+            lightIcon.classList.toggle('hidden');
+        });
 
         /**
-         * 1. ARABIC NORMALIZATION ENGINE
-         * Strips diacritics and unifies variations of Alef, Taa, Yaa
+         * SEARCH & ARABIC LOGIC
          */
         const normalizeArabic = (text) => {
             if (!text) return "";
-            return text
-                .replace(/[\u064B-\u065F]/g, "") // Remove Harakat
+            return String(text)
+                .replace(/[\u064B-\u065F]/g, "")
                 .replace(/[أإآ]/g, "ا")
                 .replace(/ة/g, "ه")
                 .replace(/[ى]/g, "ي")
@@ -176,106 +289,74 @@
                 .toLowerCase();
         };
 
-        /**
-         * 2. DATA IMPORT ENGINE
-         */
-        document.getElementById('excel-upload').addEventListener('change', function(e) {
+        // Excel Processing
+        document.getElementById('excel-upload').addEventListener('change', (e) => {
             const file = e.target.files[0];
             const reader = new FileReader();
-            
-            reader.onload = function(event) {
+            reader.onload = (event) => {
                 const data = new Uint8Array(event.target.result);
                 const workbook = XLSX.read(data, { type: 'array' });
-                
                 masterDatabase = [];
-                stats = { active: 0, delist: 0, nfs: 0 };
+                let stats = { active: 0, delist: 0, nfs: 0 };
 
-                // Process specific sheets
-                const sheetMappings = {
-                    "Active List ": "Active",
-                    "Delist ": "Delisted",
-                    "Not for sale ": "NFS"
-                };
+                const mappings = { "Active List ": "Active", "Delist ": "Delist", "Not for sale ": "NFS" };
 
-                workbook.SheetNames.forEach(sheetName => {
-                    if (sheetMappings[sheetName]) {
-                        const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-                        const processed = jsonData.map(item => ({
+                workbook.SheetNames.forEach(name => {
+                    if (mappings[name]) {
+                        const json = XLSX.utils.sheet_to_json(workbook.Sheets[name]);
+                        const items = json.map(item => ({
                             material: String(item['Material'] || ''),
                             desc_en: String(item['Material Description'] || ''),
                             desc_ar: String(item['Secondary Desc'] || ''),
                             pkg: item['Per Package'] || '1',
                             group: item['Group Code'] || 'N/A',
-                            status_desc: item['Sal./Ord.Stat. Desc.'] || '',
-                            sheet: sheetMappings[sheetName],
+                            sheet: mappings[name],
                             searchKey: normalizeArabic(`${item['Secondary Desc']} ${item['Material Description']} ${item['Material']}`)
                         }));
-                        
-                        masterDatabase.push(...processed);
-                        if (sheetMappings[sheetName] === "Active") stats.active += processed.length;
-                        if (sheetMappings[sheetName] === "Delisted") stats.delist += processed.length;
-                        if (sheetMappings[sheetName] === "NFS") stats.nfs += processed.length;
+                        masterDatabase.push(...items);
+                        if (mappings[name] === "Active") stats.active += items.length;
+                        if (mappings[name] === "Delist") stats.delist += items.length;
+                        if (mappings[name] === "NFS") stats.nfs += items.length;
                     }
                 });
 
-                updateStatsUI();
-                document.getElementById('status-indicator').innerHTML = `<span class="w-2 h-2 rounded-full bg-green-500"></span> ${masterDatabase.length} Products Loaded`;
-                document.getElementById('status-indicator').classList.replace('text-red-500', 'text-green-500');
-                alert("Database synchronized successfully!");
+                document.getElementById('stat-total').innerText = masterDatabase.length;
+                document.getElementById('stat-active').innerText = stats.active;
+                document.getElementById('stat-delist').innerText = stats.delist;
+                document.getElementById('stat-nfs').innerText = stats.nfs;
+                document.getElementById('status-dot').classList.replace('bg-red-500', 'bg-green-500');
             };
             reader.readAsArrayBuffer(file);
         });
 
-        function updateStatsUI() {
-            document.getElementById('stat-total').innerText = masterDatabase.length;
-            document.getElementById('stat-active').innerText = stats.active;
-            document.getElementById('stat-delist').innerText = stats.delist;
-            document.getElementById('stat-nfs').innerText = stats.nfs;
-        }
-
-        /**
-         * 3. SMART SEARCH ENGINE
-         */
+        // Search Interaction
         const searchInput = document.getElementById('product-search-input');
         const resultsBox = document.getElementById('search-results');
 
         searchInput.addEventListener('input', (e) => {
             const query = normalizeArabic(e.target.value);
-            if (query.length < 2) {
-                resultsBox.classList.add('hidden');
-                return;
-            }
+            if (query.length < 2) return resultsBox.classList.add('hidden');
 
-            const matches = masterDatabase.filter(item => item.searchKey.includes(query)).slice(0, 8);
-            displayResults(matches);
+            const matches = masterDatabase
+                .filter(i => i.searchKey.includes(query))
+                .slice(0, 15);
+
+            resultsBox.innerHTML = matches.map(item => `
+                <div onclick='selectProduct(${JSON.stringify(item).replace(/'/g, "&apos;")})' 
+                     class="p-4 border-b dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer flex justify-between items-center">
+                    <div class="text-right">
+                        <div class="font-bold text-lg">${item.desc_ar}</div>
+                        <div class="text-sm text-slate-400">${item.desc_en}</div>
+                    </div>
+                    <div class="font-mono font-bold text-blue-600">${item.material}</div>
+                </div>
+            `).join('');
+            resultsBox.classList.toggle('hidden', matches.length === 0);
         });
-
-        function displayResults(matches) {
-            resultsBox.innerHTML = '';
-            if (matches.length === 0) {
-                resultsBox.innerHTML = '<div class="p-4 text-slate-400">No products found...</div>';
-            } else {
-                matches.forEach(item => {
-                    const div = document.createElement('div');
-                    div.className = 'search-suggestion p-4 border-b flex justify-between items-center';
-                    div.innerHTML = `
-                        <div class="text-right">
-                            <div class="font-bold">${item.desc_ar}</div>
-                            <div class="text-xs text-slate-500">${item.desc_en}</div>
-                        </div>
-                        <div class="text-left font-mono text-blue-600 font-bold">${item.material}</div>
-                    `;
-                    div.onclick = () => selectProduct(item);
-                    resultsBox.appendChild(div);
-                });
-            }
-            resultsBox.classList.remove('hidden');
-        }
 
         function selectProduct(item) {
             resultsBox.classList.add('hidden');
-            const card = document.getElementById('product-card');
-            card.classList.remove('hidden');
+            document.getElementById('product-card').classList.remove('hidden');
             
             document.getElementById('view-title-ar').innerText = item.desc_ar;
             document.getElementById('view-title-en').innerText = item.desc_en;
@@ -284,110 +365,78 @@
             document.getElementById('view-group').innerText = item.group;
             document.getElementById('view-status').innerText = item.sheet;
 
-            // Generate Barcode
-            JsBarcode("#barcode-display", item.material, {
-                format: "CODE128",
-                width: 2,
-                height: 60,
-                displayValue: true
+            JsBarcode("#barcode-display", item.material, { 
+                format: "CODE128", width: 2.5, height: 80, displayValue: true,
+                lineColor: document.documentElement.classList.contains('dark') ? "#ffffff" : "#000000",
+                background: "transparent"
             });
 
-            // Prepare Print View
+            // Set Print View
             document.getElementById('print-name-ar').innerText = item.desc_ar;
             document.getElementById('print-name-en').innerText = item.desc_en;
-            document.getElementById('print-meta').innerText = `PKG: ${item.pkg} | ${item.material}`;
-            JsBarcode("#print-barcode", item.material, {
-                format: "CODE128",
-                width: 1.5,
-                height: 40,
-                displayValue: false
-            });
+            document.getElementById('print-meta').innerText = `PKG: ${item.pkg} | CODE: ${item.material}`;
+            JsBarcode("#print-barcode", item.material, { format: "CODE128", width: 1.8, height: 45, displayValue: false });
         }
 
         /**
-         * 4. SMART OCR & CAMERA LOGIC
+         * OCR LOGIC
          */
         const video = document.getElementById('video-preview');
-        const startBtn = document.getElementById('start-camera');
         const captureBtn = document.getElementById('capture-ocr');
+        const loader = document.getElementById('ocr-loader');
 
-        startBtn.onclick = async () => {
+        document.getElementById('start-camera').onclick = async () => {
             const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
             video.srcObject = stream;
         };
 
         captureBtn.onclick = async () => {
-            document.getElementById('ocr-loading').classList.remove('hidden');
+            loader.classList.remove('hidden');
+            document.getElementById('scan-line').classList.remove('hidden');
             
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             canvas.getContext('2d').drawImage(video, 0, 0);
             
-            const { data: { text } } = await Tesseract.recognize(canvas, 'eng+ara');
-            processOCRResult(text);
+            const { data: { text } } = await Tesseract.recognize(canvas, 'ara+eng');
+            
+            const tokens = normalizeArabic(text).split(/\s+/).filter(t => t.length > 2);
+            const scored = masterDatabase.map(p => {
+                let score = 0;
+                tokens.forEach(t => { if (p.searchKey.includes(t)) score++; });
+                return { ...p, score };
+            }).filter(p => p.score > 0).sort((a,b) => b.score - a.score).slice(0, 5);
+
+            loader.classList.add('hidden');
+            document.getElementById('scan-line').classList.add('hidden');
+            renderOCRMatches(scored);
         };
 
-        function processOCRResult(rawText) {
-            document.getElementById('ocr-loading').classList.add('hidden');
-            const tokens = normalizeArabic(rawText).split(/\s+/).filter(t => t.length > 2);
-            
-            // Scoring System (Simple Overlap)
-            const scored = masterDatabase.map(product => {
-                let score = 0;
-                tokens.forEach(token => {
-                    if (product.searchKey.includes(token)) score++;
-                });
-                return { ...product, score };
-            })
-            .filter(p => p.score > 0)
-            .sort((a, b) => b.score - a.score)
-            .slice(0, 5);
-
-            displayOCRMatches(scored);
-        }
-
-        function displayOCRMatches(matches) {
+        function renderOCRMatches(matches) {
             const container = document.getElementById('ocr-results');
-            container.innerHTML = '<h3 class="font-bold text-slate-500 underline">Matches Found via Vision:</h3>';
-            
-            if (matches.length === 0) {
-                container.innerHTML += '<p class="p-4 bg-yellow-50 rounded-lg">Could not identify text clearly. Try closer.</p>';
-                return;
-            }
-
-            matches.forEach(item => {
-                const div = document.createElement('div');
-                div.className = 'glass-morphism p-4 rounded-xl flex justify-between items-center border-r-4 border-green-500 cursor-pointer hover:bg-green-50';
-                div.innerHTML = `
+            container.innerHTML = matches.map(item => `
+                <div onclick='switchTab("search"); selectProduct(${JSON.stringify(item).replace(/'/g, "&apos;")})' 
+                     class="bg-white dark:bg-darkCard p-4 rounded-2xl flex justify-between items-center border-r-8 border-green-500 shadow-md">
                     <div class="text-right">
                         <div class="font-bold">${item.desc_ar}</div>
-                        <div class="text-xs text-slate-500 italic">${item.desc_en}</div>
+                        <div class="text-xs text-slate-400">${item.desc_en}</div>
                     </div>
-                    <div class="bg-green-100 text-green-700 px-3 py-1 rounded text-xs font-bold">Match Score: ${item.score}</div>
-                `;
-                div.onclick = () => {
-                    switchTab('search');
-                    selectProduct(item);
-                };
-                container.appendChild(div);
-            });
+                    <div class="text-xs font-bold bg-green-100 text-green-700 px-2 py-1 rounded-full">Score: ${item.score}</div>
+                </div>
+            `).join('');
         }
 
-        /**
-         * 5. UI UTILITIES
-         */
         function switchTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('tab-active'));
-            
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
             document.getElementById(`tab-${tabId}`).classList.remove('hidden');
-            event.target.classList.add('tab-active');
-
-            // Stop camera if not in OCR tab
-            if (tabId !== 'ocr' && video.srcObject) {
-                video.srcObject.getTracks().forEach(track => track.stop());
-            }
+            
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active-tab');
+                btn.classList.add('text-slate-500');
+            });
+            // Update UI for both mobile and desktop buttons
+            event?.currentTarget?.classList.add('active-tab');
         }
     </script>
 </body>
