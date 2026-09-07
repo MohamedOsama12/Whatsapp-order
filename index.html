@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام الكاشير الذكي - نسخة البحث المتقدم</title>
+    <title>نظام الكاشير الاحترافي - معالجة متقدمة</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -11,115 +11,64 @@
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
-        body { font-family: 'Cairo', sans-serif; background-color: #f8fafc; }
-        .scanning-focus { border: 2px solid #10b981; position: absolute; inset: 15%; border-radius: 20px; box-shadow: 0 0 0 1000px rgba(0,0,0,0.4); pointer-events: none; }
-        .scan-anim { position: absolute; width: 100%; height: 3px; background: #10b981; top: 0; animation: scanMove 2s infinite linear; box-shadow: 0 0 15px #10b981; }
-        @keyframes scanMove { 0% { top: 15%; } 100% { top: 85%; } }
-        .loader { border-top-color: #6366f1; animation: spin 0.8s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        body { font-family: 'Cairo', sans-serif; background-color: #f0f4f8; }
+        .focus-area { border: 2px solid #10b981; position: absolute; inset: 20%; border-radius: 15px; box-shadow: 0 0 0 1000px rgba(0,0,0,0.6); pointer-events: none; }
+        .scan-line { position: absolute; width: 100%; height: 2px; background: #10b981; top: 0; animation: scanMove 2.5s infinite; }
+        @keyframes scanMove { 0% { top: 20%; } 100% { top: 80%; } }
     </style>
 </head>
 <body class="pb-10">
 
-    <main class="container mx-auto px-4 py-6 max-w-4xl">
+    <main class="container mx-auto px-4 py-6 max-w-2xl">
         
-        <!-- منطقة رفع الملف -->
-        <div id="upload-zone" class="bg-white p-10 rounded-3xl shadow-xl text-center border-4 border-dashed border-indigo-100 mb-8">
-            <div class="bg-indigo-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <i class="fa-solid fa-file-excel text-3xl text-indigo-600"></i>
-            </div>
-            <h1 class="text-2xl font-black text-slate-800 mb-2">نظام البحث الذكي عن المنتجات</h1>
-            <p class="text-slate-500 mb-6">ارفع ملف الإكسيل الذي يحتوي على أسماء المنتجات والباركود</p>
-            <input type="file" id="file-input" accept=".xlsx, .xls" class="block w-full text-sm text-slate-500 file:bg-indigo-600 file:text-white file:px-6 file:py-3 file:rounded-full file:border-0 file:cursor-pointer hover:file:bg-indigo-700 transition"/>
+        <!-- التحميل -->
+        <div id="upload-zone" class="bg-white p-8 rounded-3xl shadow-xl text-center border-4 border-dashed border-indigo-100 mb-6">
+            <h1 class="text-xl font-black text-slate-800 mb-4">ارفع ملف المنتجات (Excel)</h1>
+            <input type="file" id="file-input" accept=".xlsx, .xls" class="block w-full text-sm file:bg-indigo-600 file:text-white file:px-6 file:py-2 file:rounded-full file:border-0 cursor-pointer"/>
         </div>
 
-        <!-- لوحة التحكم -->
-        <div id="dashboard" class="hidden space-y-6">
-            
-            <div class="bg-indigo-600 text-white p-4 rounded-2xl flex justify-between items-center shadow-lg">
-                <div class="flex items-center gap-3">
-                    <i class="fa-solid fa-database"></i>
-                    <span class="font-bold">المخزن: <span id="db-count">0</span> منتج</span>
+        <div id="dashboard" class="hidden space-y-5">
+            <!-- نافذة الكاميرا -->
+            <div class="bg-white rounded-3xl shadow-2xl overflow-hidden relative">
+                <div class="relative aspect-[4/3] bg-black">
+                    <video id="video" autoplay playsinline class="w-full h-full object-cover"></video>
+                    <div class="focus-area"><div class="scan-line"></div></div>
                 </div>
-                <button onclick="location.reload()" class="bg-white/20 hover:bg-white/30 px-4 py-1 rounded-lg text-sm">تغيير الملف</button>
-            </div>
-
-            <div class="bg-white rounded-3xl shadow-xl overflow-hidden">
-                <div class="flex bg-slate-100 p-2">
-                    <button onclick="setTab('cam')" id="tab-cam" class="flex-1 py-3 rounded-xl font-bold bg-white shadow text-indigo-600">المسح الضوئي (كاميرا)</button>
-                    <button onclick="setTab('manual')" id="tab-manual" class="flex-1 py-3 rounded-xl font-bold text-slate-500">بحث يدوي</button>
-                </div>
-
-                <div class="p-6">
-                    <div id="cam-view" class="space-y-4">
-                        <div class="relative max-w-md mx-auto aspect-square bg-black rounded-3xl overflow-hidden shadow-2xl">
-                            <video id="video" autoplay playsinline class="w-full h-full object-cover"></video>
-                            <div class="scanning-focus">
-                                <div class="scan-anim"></div>
-                            </div>
-                        </div>
-                        <button onclick="captureAndOCR()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-5 rounded-2xl font-black text-xl shadow-xl transition-all flex items-center justify-center gap-4">
-                            <i class="fa-solid fa-camera"></i> تحليل المنتج الآن
-                        </button>
-                        
-                        <div id="loading" class="hidden text-center py-4 bg-indigo-50 rounded-2xl border-2 border-indigo-100">
-                            <div class="loader w-8 h-8 border-4 border-slate-200 rounded-full mx-auto mb-2"></div>
-                            <p class="text-indigo-700 font-bold animate-pulse">جاري تفكيك الكلمات والبحث في القاعدة...</p>
-                        </div>
-
-                        <div id="debug-text" class="p-3 bg-slate-800 text-green-400 rounded-xl text-center text-xs font-mono overflow-hidden">
-                            النص المستخرج سيظهر هنا...
-                        </div>
-                    </div>
-
-                    <div id="manual-view" class="hidden">
-                        <input type="text" id="manual-input" oninput="manualSearch()" placeholder="اكتب اسم المنتج أو الماركة..." class="w-full p-5 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:border-indigo-500 outline-none">
-                    </div>
+                
+                <div class="p-4 bg-white">
+                    <button onclick="processImage()" class="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold text-lg shadow-lg active:scale-95 transition">
+                        <i class="fa-solid fa-bolt-lightning mr-2"></i> قراءة المنتج الآن
+                    </button>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- قائمة النتائج -->
-                <div class="bg-white p-6 rounded-3xl shadow-md border border-slate-100">
-                    <h3 class="font-black text-slate-700 mb-4 flex items-center gap-2"><i class="fa-solid fa-magnifying-glass text-indigo-500"></i> أفضل المطابقات:</h3>
-                    <div id="results-list" class="space-y-3 min-h-[150px]">
-                        <p class="text-slate-400 text-center py-10">وجه الكاميرا واضغط "تحليل"</p>
-                    </div>
-                </div>
+            <!-- لوحة النتائج -->
+            <div id="loading" class="hidden bg-indigo-50 p-4 rounded-2xl text-center animate-pulse border border-indigo-200">
+                <span class="text-indigo-700 font-bold">جاري تنظيف الصورة وقراءة الكلمات...</span>
+            </div>
 
-                <!-- معاينة الملصق -->
-                <div class="bg-white p-6 rounded-3xl shadow-xl border-t-8 border-indigo-600 text-center flex flex-col justify-center items-center">
-                    <div id="card-empty" class="text-slate-200 py-10">
-                        <i class="fa-solid fa-barcode text-9xl"></i>
-                    </div>
-                    <div id="card-content" class="hidden w-full space-y-4">
-                        <h2 id="view-name" class="text-2xl font-black text-slate-800"></h2>
-                        <p id="view-code" class="font-mono text-indigo-600 font-bold bg-indigo-50 px-4 py-1 rounded-full inline-block"></p>
-                        <div class="p-4 bg-white border border-slate-100 rounded-2xl">
-                            <svg id="barcode-svg" class="mx-auto"></svg>
-                        </div>
-                        <button onclick="window.print()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-print"></i> طباعة الملصق
-                        </button>
-                    </div>
+            <div class="bg-slate-800 p-4 rounded-2xl shadow-inner overflow-hidden">
+                <p class="text-slate-400 text-xs mb-2">النص المنقح والمستخرج:</p>
+                <div id="extracted-text-display" class="text-green-400 font-mono text-sm leading-relaxed min-h-[40px]">
+                    بانتظار المسح...
                 </div>
+            </div>
+
+            <div id="results-container" class="space-y-3">
+                <!-- النتائج ستظهر هنا -->
             </div>
         </div>
     </main>
 
     <script>
         let products = [];
-        let camStream = null;
-
-        // 1. تنظيف وتوحيد النصوص (للغة العربية والإنجليزية)
-        function normalize(str) {
+        
+        // 1. تنظيف النصوص
+        function cleanString(str) {
             if (!str) return "";
             return String(str).toLowerCase().trim()
-                .replace(/[أإآ]/g, "ا")
-                .replace(/ة/g, "ه")
-                .replace(/ى/g, "ي")
-                .replace(/[^a-z0-9أ-ي\s]/g, " ") // حذف الرموز الغريبة
-                .replace(/\s+/g, " "); // توحيد المسافات
+                .replace(/[أإآ]/g, "ا").replace(/ة/g, "ه").replace(/ى/g, "ي")
+                .replace(/[^a-z0-9أ-ي\s]/g, " ").replace(/\s+/g, " ");
         }
 
         // 2. معالجة ملف الإكسيل
@@ -133,20 +82,11 @@
                     const rows = XLSX.utils.sheet_to_json(wb.Sheets[sh], {header:1});
                     rows.forEach(row => {
                         let cells = row.map(c => String(c || ""));
-                        // محاولة إيجاد الباركود (أطول رقم في الصف) والاسم
-                        let code = cells.filter(c => /^\d+$/.test(c)).reduce((a, b) => a.length >= b.length ? a : b, "");
-                        let name = cells.filter(c => /[a-zA-Zأ-ي]/.test(c)).reduce((a, b) => a.length >= b.length ? a : b, "");
-                        
-                        if(code && name) {
-                            products.push({ 
-                                code, 
-                                name, 
-                                searchBag: normalize(cells.join(" ")) // كل البيانات للبحث فيها
-                            });
-                        }
+                        let code = cells.find(c => /^\d{5,}$/.test(c)) || "";
+                        let name = cells.find(c => /[a-zA-Zأ-ي]/.test(c)) || "";
+                        if(name) products.push({ code, name, searchBag: cleanString(cells.join(" ")) });
                     });
                 });
-                document.getElementById('db-count').innerText = products.length;
                 document.getElementById('upload-zone').classList.add('hidden');
                 document.getElementById('dashboard').classList.remove('hidden');
                 startCamera();
@@ -154,131 +94,106 @@
             reader.readAsArrayBuffer(e.target.files[0]);
         });
 
-        // 3. المحرك الذكي للبحث (تجزئة النص + نظام النقاط)
-        function smartSearch(rawText) {
-            const cleanText = normalize(rawText);
-            // تقسيم النص المستخرج إلى كلمات، واستبعاد الكلمات التي طولها أقل من 3 حروف (أخطاء الـ OCR غالباً)
-            const keywords = cleanText.split(" ").filter(word => word.length >= 3);
-            
-            if (keywords.length === 0) return [];
-
-            let results = products.map(product => {
-                let score = 0;
-                let matches = [];
-
-                keywords.forEach(keyword => {
-                    if (product.searchBag.includes(keyword)) {
-                        // كلما كانت الكلمة أطول، زادت أهميتها في البحث
-                        score += (keyword.length * 10);
-                        matches.push(keyword);
-                    }
-                });
-
-                return { ...product, score, matches };
+        async function startCamera() {
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: 'environment', width: 1280, height: 720 } 
             });
-
-            // فلترة المنتجات التي لم يتطابق معها أي كلمة، ثم الترتيب حسب النقاط
-            return results
-                .filter(p => p.score > 0)
-                .sort((a, b) => b.score - a.score)
-                .slice(0, 6);
+            document.getElementById('video').srcObject = stream;
         }
 
-        // 4. تحليل الصورة (OCR)
-        async function captureAndOCR() {
+        // 3. تحسين الصورة برمجياً قبل الـ OCR (السر في الدقة)
+        function enhanceImage(canvas) {
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            
+            for (let i = 0; i < data.length; i += 4) {
+                // تحويل لرمادي
+                const avg = (data[i] + data[i+1] + data[i+2]) / 3;
+                // زيادة التباين (Thresholding) لجعل الحروف سوداء والخلفية بيضاء
+                const val = avg > 140 ? 255 : 0; 
+                data[i] = data[i+1] = data[i+2] = val;
+            }
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        async function processImage() {
             const video = document.getElementById('video');
             const loader = document.getElementById('loading');
-            const debug = document.getElementById('debug-text');
+            const textDisplay = document.getElementById('extracted-text-display');
             
-            // إنشاء كانفاس لالتقاط الصورة بجودة عالية
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d');
+            
+            // قص المنطقة التي بداخل المربع فقط لتركيز الدقة
             ctx.drawImage(video, 0, 0);
+            enhanceImage(canvas); // تشغيل الفلتر المطور
 
             loader.classList.remove('hidden');
+            textDisplay.innerText = "جاري التحليل...";
 
             try {
-                // تشغيل OCR للغتين العربية والإنجليزية
-                const result = await Tesseract.recognize(canvas, 'ara+eng');
-                const rawText = result.data.text;
-                
-                debug.innerText = "النص المقروء: " + rawText.replace(/\n/g, " ");
+                const result = await Tesseract.recognize(canvas, 'ara+eng', {
+                    tessedit_pageseg_mode: 11 // وضع قراءة النصوص المتفرقة ( Sparse Text )
+                });
 
-                // البحث باستخدام النظام الجديد
-                const matches = smartSearch(rawText);
-                renderResults(matches);
+                // 4. استخراج الكلمات المنفصلة وتنظيفها من "الهلوسة" الرقمية
+                const rawWords = result.data.text.split(/\s+/);
+                const validWords = rawWords.filter(word => {
+                    // شروط الكلمة الحقيقية: طولها > 2، تحتوي حروف أو أرقام، ليست رموز عشوائية
+                    return word.length > 2 && /[a-zA-Zأ-ي0-9]/.test(word);
+                });
 
-                if(matches.length > 0) {
-                    selectProduct(matches[0]);
-                } else {
-                    alert("لم يتم التعثور على كلمات مطابقة بوضوح. حاول تقريب الكاميرا من اسم المنتج.");
-                }
+                textDisplay.innerText = validWords.join(" | ");
+
+                performSearch(validWords);
 
             } catch (err) {
-                console.error("OCR Error:", err);
+                alert("حدث خطأ في القراءة: " + err.message);
             } finally {
                 loader.classList.add('hidden');
             }
         }
 
+        // 5. نظام البحث بالكلمات المنفصلة (Multi-Keyword Search)
+        function performSearch(keywords) {
+            if (keywords.length === 0) return;
+
+            const results = products.map(p => {
+                let score = 0;
+                keywords.forEach(word => {
+                    const cleanWord = cleanString(word);
+                    if (p.searchBag.includes(cleanWord)) {
+                        score += (cleanWord.length * 5); // وزن للكلمات الأطول
+                    }
+                });
+                return { ...p, score };
+            })
+            .filter(p => p.score > 0)
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 5);
+
+            renderResults(results);
+        }
+
         function renderResults(list) {
-            const container = document.getElementById('results-list');
-            container.innerHTML = list.length ? '' : '<p class="text-slate-400 text-center py-6">لا توجد نتائج مطابقة</p>';
+            const container = document.getElementById('results-container');
+            container.innerHTML = list.length ? "" : "<p class='text-center text-slate-500 py-4'>لا توجد تطابقات دقيقة</p>";
             
             list.forEach(p => {
                 const div = document.createElement('div');
-                div.className = "p-4 bg-slate-50 border-2 border-transparent hover:border-indigo-500 rounded-2xl cursor-pointer transition-all flex justify-between items-center group";
-                div.onclick = () => selectProduct(p);
+                div.className = "bg-white p-4 rounded-2xl shadow border-r-4 border-indigo-500 flex justify-between items-center";
                 div.innerHTML = `
-                    <div class="flex-1">
-                        <h4 class="font-black text-slate-800 group-hover:text-indigo-600 transition">${p.name}</h4>
-                        <div class="flex gap-2 mt-1">
-                            <span class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">دقة: ${p.score}</span>
-                            <span class="text-[10px] font-mono text-slate-400">${p.code}</span>
-                        </div>
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-sm">${p.name}</h3>
+                        <p class="text-xs text-indigo-500 font-mono">${p.code}</p>
                     </div>
-                    <i class="fa-solid fa-circle-check text-slate-200 group-hover:text-indigo-500 text-xl"></i>
+                    <span class="bg-indigo-50 text-indigo-600 px-2 py-1 rounded text-[10px] font-bold">دقة: ${p.score}</span>
                 `;
                 container.appendChild(div);
             });
-        }
-
-        function selectProduct(p) {
-            document.getElementById('card-empty').classList.add('hidden');
-            document.getElementById('card-content').classList.remove('hidden');
-            document.getElementById('view-name').innerText = p.name;
-            document.getElementById('view-code').innerText = p.code;
-            
-            JsBarcode("#barcode-svg", p.code, {
-                format: "CODE128",
-                width: 2.5,
-                height: 70,
-                displayValue: false,
-                margin: 0
-            });
-        }
-
-        function startCamera() {
-            navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } 
-            }).then(s => { 
-                camStream = s; 
-                document.getElementById('video').srcObject = s; 
-            }).catch(err => alert("يرجى السماح بالوصول للكاميرا"));
-        }
-
-        function setTab(t) {
-            document.getElementById('cam-view').classList.toggle('hidden', t !== 'cam');
-            document.getElementById('manual-view').classList.toggle('hidden', t !== 'manual');
-            document.getElementById('tab-cam').className = t === 'cam' ? 'flex-1 py-3 rounded-xl font-bold bg-white shadow text-indigo-600' : 'flex-1 py-3 rounded-xl font-bold text-slate-500';
-            document.getElementById('tab-manual').className = t === 'manual' ? 'flex-1 py-3 rounded-xl font-bold bg-white shadow text-indigo-600' : 'flex-1 py-3 rounded-xl font-bold text-slate-500';
-        }
-        
-        function manualSearch() {
-            const val = document.getElementById('manual-input').value;
-            if(val.length > 2) renderResults(smartSearch(val));
         }
     </script>
 </body>
