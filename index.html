@@ -162,6 +162,41 @@
     </div>
 
     <script>
+        // --- Persistence Layer (IndexedDB) ---
+        const DB_NAME = "RetailInventoryDB";
+        const STORE_NAME = "InventoryStore";
+
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, 1);
+                request.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        db.createObjectStore(STORE_NAME);
+                    }
+                };
+                request.onsuccess = (e) => resolve(e.target.result);
+                request.onerror = (e) => reject(e.target.error);
+            });
+        }
+
+        async function saveDatabase(data) {
+            const db = await openDB();
+            const tx = db.transaction(STORE_NAME, "readwrite");
+            tx.objectStore(STORE_NAME).put(data, "master_data");
+            return new Promise((resolve) => tx.oncomplete = resolve);
+        }
+
+        async function loadDatabase() {
+            const db = await openDB();
+            return new Promise((resolve) => {
+                const request = db.transaction(STORE_NAME).objectStore(STORE_NAME).get("master_data");
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => resolve(null);
+            });
+        }
+
+        // --- Original Logic Starts ---
         let masterDatabase = [];
         let currentLang = 'ar';
 
@@ -206,18 +241,29 @@
         };
         if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
 
+        function updateStatsDisplay() {
+            let activeCount = 0, delistCount = 0;
+            masterDatabase.forEach(item => {
+                if(item.sheet === "Active") activeCount++;
+                if(item.sheet === "Delist") delistCount++;
+            });
+            document.getElementById('stat-total').innerText = masterDatabase.length;
+            document.getElementById('stat-active').innerText = activeCount;
+            document.getElementById('stat-delist').innerText = delistCount;
+            document.getElementById('status-dot').className = masterDatabase.length > 0 ? 'w-3 h-3 rounded-full bg-green-500' : 'w-3 h-3 rounded-full bg-red-500';
+        }
+
         document.getElementById('excel-upload').addEventListener('change', (e) => {
             const file = e.target.files[0];
             const reader = new FileReader();
-            reader.onload = (event) => {
+            reader.onload = async (event) => {
                 const workbook = XLSX.read(new Uint8Array(event.target.result), { type: 'array' });
                 masterDatabase = [];
-                let activeCount = 0, delistCount = 0;
                 const mappings = { "Active List ": "Active", "Delist ": "Delist", "Not for sale ": "NFS" };
                 workbook.SheetNames.forEach(name => {
                     if (mappings[name]) {
                         const items = XLSX.utils.sheet_to_json(workbook.Sheets[name]).map(item => ({
-                            ...item, // Capture all raw columns from the sheet
+                            ...item,
                             material: String(item['Material'] || '').trim(),
                             desc_en: String(item['Material Description'] || ''),
                             desc_ar: String(item['Secondary Desc'] || ''),
@@ -225,14 +271,10 @@
                             searchKey: (String(item['Secondary Desc'] || '') + ' ' + String(item['Material Description'] || '') + ' ' + String(item['Material'] || '')).toLowerCase()
                         }));
                         masterDatabase.push(...items);
-                        if(mappings[name] === "Active") activeCount += items.length;
-                        if(mappings[name] === "Delist") delistCount += items.length;
                     }
                 });
-                document.getElementById('stat-total').innerText = masterDatabase.length;
-                document.getElementById('stat-active').innerText = activeCount;
-                document.getElementById('stat-delist').innerText = delistCount;
-                document.getElementById('status-dot').className = 'w-3 h-3 rounded-full bg-green-500';
+                await saveDatabase(masterDatabase); // Save parsed data permanently
+                updateStatsDisplay();
             };
             reader.readAsArrayBuffer(file);
         });
@@ -259,7 +301,6 @@
             document.getElementById('view-title-ar').innerText = item.desc_ar;
             document.getElementById('view-title-en').innerText = item.desc_en;
             
-            // Injects all Excel columns dynamically
             const detailsDiv = document.getElementById('dynamic-details');
             detailsDiv.innerHTML = Object.entries(item)
                 .filter(([key]) => !['searchKey', 'desc_ar', 'desc_en', 'material', 'sheet'].includes(key)) 
@@ -324,7 +365,17 @@
             const activeNav = document.getElementById('nav-' + id);
             if(activeNav) activeNav.classList.add('active-tab');
         }
-        updateLanguage();
+
+        // --- Auto-Load Logic ---
+        window.addEventListener('load', async () => {
+            updateLanguage();
+            const savedData = await loadDatabase();
+            if (savedData && savedData.length > 0) {
+                masterDatabase = savedData;
+                updateStatsDisplay();
+                console.log("Database successfully recovered from memory.");
+            }
+        });
     </script>
 </body>
 </html>
