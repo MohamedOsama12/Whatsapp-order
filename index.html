@@ -35,8 +35,7 @@
         .active-tab { border-bottom: 4px solid #2563eb; color: #2563eb; }
         .dark .active-tab { border-bottom: 4px solid #60a5fa; color: #60a5fa; }
         
-        /* منع ظهور أي نصوص زائدة */
-        #barcode-display { background: white !important; padding: 10px; border-radius: 8px; }
+        #barcode-display { background: white !important; padding: 10px; border-radius: 8px; min-width: 200px; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 dark:bg-darkBg dark:text-slate-100 min-h-screen pb-24 lg:pb-0">
@@ -44,13 +43,16 @@
     <!-- Header Navigation -->
     <nav class="glass sticky top-0 z-50 px-4 py-3 flex justify-between items-center shadow-sm">
         <div class="flex items-center gap-2">
-            <div class="p-2 bg-blue-600 rounded-lg">
-                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+            <div class="p-2 bg-blue-600 rounded-lg text-white">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
             </div>
             <h1 class="text-xl font-bold">Retail<span class="text-blue-600">Manager</span></h1>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2">
+            <!-- Language Toggle Button -->
+            <button id="lang-toggle" class="p-2 rounded-xl bg-blue-100 dark:bg-slate-700 text-blue-600 dark:text-blue-400 font-bold text-xs">EN</button>
+            
             <button id="theme-toggle" class="p-2 rounded-xl bg-slate-200 dark:bg-slate-700">
                 <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
                 <svg id="theme-toggle-light-icon" class="hidden w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"></path></svg>
@@ -61,19 +63,38 @@
 
     <main class="p-4 max-w-4xl mx-auto">
         
-        <!-- SECTION 1: DATA/IMPORT -->
+        <!-- SECTION 1: DATA (WITH RESTORED STATS) -->
         <section id="tab-import" class="tab-content active">
             <div class="bg-white dark:bg-darkCard p-6 rounded-2xl shadow-md border border-slate-100 dark:border-slate-800 mb-6">
                 <input type="file" id="excel-upload" class="hidden" accept=".xlsx, .xls">
                 <label for="excel-upload" class="cursor-pointer block text-center py-10 border-2 border-dashed border-blue-200 dark:border-slate-700 rounded-xl">
-                    <div class="text-blue-600 font-bold mb-2 text-lg">تحميل ملف البيانات (Excel)</div>
+                    <div id="txt-upload-title" class="text-blue-600 font-bold mb-2 text-lg">تحميل ملف البيانات (Excel)</div>
                     <div class="text-slate-400 text-sm">Active, Delist, NFS</div>
                 </label>
             </div>
             
-            <div class="bg-white dark:bg-darkCard p-6 rounded-2xl shadow-md">
-                <label class="block text-sm font-bold mb-2">Gemini API Key</label>
-                <input type="password" id="gemini-key" class="w-full p-3 rounded-lg bg-slate-100 dark:bg-slate-800 border-none" placeholder="Enter API Key...">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-white dark:bg-darkCard p-6 rounded-2xl shadow-md space-y-4">
+                    <h3 id="txt-stats-title" class="font-bold border-b dark:border-slate-700 pb-2">الإحصائيات</h3>
+                    <div class="flex justify-between items-center bg-slate-50 dark:bg-slate-800 p-3 rounded-xl">
+                        <span id="txt-stat-total">إجمالي المنتجات</span>
+                        <span id="stat-total" class="font-bold text-blue-600">0</span>
+                    </div>
+                    <div class="flex justify-between items-center bg-green-50 dark:bg-green-900/20 p-3 rounded-xl text-green-600">
+                        <span id="txt-stat-active">النشط (Active)</span>
+                        <span id="stat-active" class="font-bold">0</span>
+                    </div>
+                    <div class="flex justify-between items-center bg-orange-50 dark:bg-orange-900/20 p-3 rounded-xl text-orange-600">
+                        <span id="txt-stat-delist">الملغي (Delist)</span>
+                        <span id="stat-delist" class="font-bold">0</span>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-darkCard p-6 rounded-2xl shadow-md">
+                    <h3 id="txt-settings-title" class="font-bold border-b dark:border-slate-700 pb-2 mb-4">الإعدادات</h3>
+                    <label class="block text-xs font-bold mb-2 text-slate-400 uppercase">Gemini API Key</label>
+                    <input type="password" id="gemini-key" class="w-full p-3 rounded-lg bg-slate-100 dark:bg-slate-800 border-none outline-none focus:ring-2 ring-blue-500" placeholder="API Key...">
+                </div>
             </div>
         </section>
 
@@ -81,23 +102,24 @@
         <section id="tab-search" class="tab-content">
             <div class="relative mb-6">
                 <input type="text" id="product-search-input" placeholder="ابحث باسم المنتج أو الكود..." 
-                       class="w-full h-14 pr-4 pl-4 rounded-xl bg-white dark:bg-darkCard shadow-lg outline-none text-lg text-right border-2 border-transparent focus:border-blue-500">
+                       class="w-full h-14 px-4 rounded-xl bg-white dark:bg-darkCard shadow-lg outline-none text-lg border-2 border-transparent focus:border-blue-500">
                 <div id="search-results" class="absolute w-full mt-2 bg-white dark:bg-darkCard rounded-xl shadow-2xl max-h-60 overflow-y-auto hidden z-50"></div>
             </div>
 
-            <div id="product-card" class="hidden bg-white dark:bg-darkCard rounded-3xl shadow-xl overflow-hidden p-6 border dark:border-slate-800">
-                <div class="text-right space-y-4">
+            <div id="product-card" class="hidden bg-white dark:bg-darkCard rounded-3xl shadow-xl overflow-hidden p-6 border dark:border-slate-800 animate-fade-in">
+                <div class="space-y-4">
                     <h2 id="view-title-ar" class="text-2xl font-bold"></h2>
                     <p id="view-title-en" class="text-slate-400 italic"></p>
                     <div class="grid grid-cols-2 gap-4">
-                        <div class="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg"><span class="text-xs text-slate-400 block">الكود</span><span id="view-code" class="font-bold"></span></div>
-                        <div class="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg"><span class="text-xs text-slate-400 block">الحالة</span><span id="view-status" class="font-bold text-blue-500"></span></div>
+                        <div class="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg"><span id="txt-label-code" class="text-xs text-slate-400 block">الكود</span><span id="view-code" class="font-bold"></span></div>
+                        <div class="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg"><span id="txt-label-status" class="text-xs text-slate-400 block">الحالة</span><span id="view-status" class="font-bold text-blue-500"></span></div>
                     </div>
                     
-                    <!-- BARCODE DISPLAY -->
-                    <div class="flex flex-col items-center justify-center py-6 bg-slate-100 dark:bg-slate-900 rounded-2xl">
-                        <svg id="barcode-display"></svg>
-                        <button onclick="window.print()" class="mt-4 bg-blue-600 text-white px-8 py-3 rounded-xl font-bold w-full max-w-xs">طباعة الملصق</button>
+                    <div class="flex flex-col items-center justify-center py-6 bg-slate-100 dark:bg-slate-900/50 rounded-2xl">
+                        <div class="bg-white p-2 rounded-lg shadow-sm">
+                            <svg id="barcode-display"></svg>
+                        </div>
+                        <button id="btn-print" onclick="window.print()" class="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-10 py-4 rounded-2xl font-bold w-full max-w-xs transition-all active:scale-95 shadow-lg">طباعة الملصق</button>
                     </div>
                 </div>
             </div>
@@ -105,34 +127,34 @@
 
         <!-- SECTION 3: VISION -->
         <section id="tab-ocr" class="tab-content">
-            <div class="bg-black rounded-2xl overflow-hidden relative aspect-video shadow-2xl mb-4">
+            <div class="bg-black rounded-2xl overflow-hidden relative aspect-video shadow-2xl mb-4 border-2 border-white dark:border-slate-800">
                 <video id="video-preview" class="w-full h-full object-cover" autoplay playsinline></video>
-                <div id="scan-line" class="absolute top-0 left-0 w-full h-1 bg-blue-500 hidden"></div>
+                <div id="scan-line" class="absolute top-0 left-0 w-full h-1 bg-blue-500 shadow-[0_0_15px_blue] hidden"></div>
             </div>
             
             <div class="grid grid-cols-2 gap-4 mb-6">
                 <button id="start-camera" class="bg-slate-800 text-white p-4 rounded-xl font-bold text-sm">فتح الكاميرا</button>
                 <button id="capture-ocr" class="bg-blue-600 text-white p-4 rounded-xl font-bold text-sm">تحليل ذكي (Gemini)</button>
             </div>
-            <div id="ocr-loader" class="hidden text-center text-blue-500 font-bold">جاري التحليل...</div>
+            <div id="ocr-loader" class="hidden text-center text-blue-500 font-bold py-4">جاري التحليل...</div>
             <div id="ocr-results" class="space-y-3"></div>
         </section>
 
     </main>
 
     <!-- Bottom Navigation (Mobile) -->
-    <div class="fixed bottom-0 left-0 right-0 glass border-t p-2 flex justify-around items-center lg:hidden">
-        <button onclick="switchTab('ocr')" class="nav-btn flex flex-col items-center gap-1 p-2">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path></svg>
-            <span class="text-xs">الرؤية</span>
+    <div class="fixed bottom-0 left-0 right-0 glass border-t p-2 flex justify-around items-center lg:hidden z-50">
+        <button onclick="switchTab('import')" id="nav-import" class="nav-btn flex flex-col items-center gap-1 p-2 active-tab">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+            <span class="text-xs">البيانات</span>
         </button>
-        <button onclick="switchTab('search')" class="nav-btn flex flex-col items-center gap-1 p-2">
+        <button onclick="switchTab('search')" id="nav-search" class="nav-btn flex flex-col items-center gap-1 p-2">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
             <span class="text-xs">البحث</span>
         </button>
-        <button onclick="switchTab('import')" class="nav-btn flex flex-col items-center gap-1 p-2 active-tab">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-            <span class="text-xs">البيانات</span>
+        <button onclick="switchTab('ocr')" id="nav-ocr" class="nav-btn flex flex-col items-center gap-1 p-2">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path></svg>
+            <span class="text-xs">الرؤية</span>
         </button>
     </div>
 
@@ -145,6 +167,79 @@
 
     <script>
         let masterDatabase = [];
+        let currentLang = 'ar';
+
+        const translations = {
+            ar: {
+                uploadTitle: "تحميل ملف البيانات (Excel)",
+                statsTitle: "الإحصائيات",
+                total: "إجمالي المنتجات",
+                active: "النشط (Active)",
+                delist: "الملغي (Delist)",
+                settings: "الإعدادات",
+                searchPlaceholder: "ابحث باسم المنتج أو الكود...",
+                labelCode: "الكود",
+                labelStatus: "الحالة",
+                btnPrint: "طباعة الملصق",
+                btnCamera: "فتح الكاميرا",
+                btnAnalyze: "تحليل ذكي (Gemini)",
+                loading: "جاري التحليل...",
+                navData: "البيانات",
+                navSearch: "البحث",
+                navVision: "الرؤية",
+                noMatch: "لم يتم العثور على تطابق"
+            },
+            en: {
+                uploadTitle: "Upload Data File (Excel)",
+                statsTitle: "Statistics",
+                total: "Total Products",
+                active: "Active",
+                delist: "Delisted",
+                settings: "Settings",
+                searchPlaceholder: "Search by name or code...",
+                labelCode: "Material Code",
+                labelStatus: "Status",
+                btnPrint: "Print Label",
+                btnCamera: "Open Camera",
+                btnAnalyze: "Smart Analysis",
+                loading: "Analyzing...",
+                navData: "Data",
+                navSearch: "Search",
+                navVision: "Vision",
+                noMatch: "No match found"
+            }
+        };
+
+        function updateLanguage() {
+            const t = translations[currentLang];
+            document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+            document.getElementById('lang-toggle').innerText = currentLang === 'ar' ? 'EN' : 'AR';
+            
+            document.getElementById('txt-upload-title').innerText = t.uploadTitle;
+            document.getElementById('txt-stats-title').innerText = t.statsTitle;
+            document.getElementById('txt-stat-total').innerText = t.total;
+            document.getElementById('txt-stat-active').innerText = t.active;
+            document.getElementById('txt-stat-delist').innerText = t.delist;
+            document.getElementById('txt-settings-title').innerText = t.settings;
+            document.getElementById('product-search-input').placeholder = t.searchPlaceholder;
+            document.getElementById('txt-label-code').innerText = t.labelCode;
+            document.getElementById('txt-label-status').innerText = t.labelStatus;
+            document.getElementById('btn-print').innerText = t.btnPrint;
+            document.getElementById('start-camera').innerText = t.btnCamera;
+            document.getElementById('capture-ocr').innerText = t.btnAnalyze;
+            document.getElementById('ocr-loader').innerText = t.loading;
+            
+            document.querySelector('#nav-import span').innerText = t.navData;
+            document.querySelector('#nav-search span').innerText = t.navSearch;
+            document.querySelector('#nav-ocr span').innerText = t.navVision;
+            
+            document.getElementById('product-search-input').style.textAlign = currentLang === 'ar' ? 'right' : 'left';
+        }
+
+        document.getElementById('lang-toggle').onclick = () => {
+            currentLang = currentLang === 'ar' ? 'en' : 'ar';
+            updateLanguage();
+        };
 
         // API Key Init
         const keyField = document.getElementById('gemini-key');
@@ -159,17 +254,19 @@
             document.getElementById('theme-toggle-dark-icon').classList.toggle('hidden', isDark);
             document.getElementById('theme-toggle-light-icon').classList.toggle('hidden', !isDark);
         };
-
         if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
 
-        // Excel Import
+        // Excel Import (With Stats Calculation)
         document.getElementById('excel-upload').addEventListener('change', (e) => {
             const file = e.target.files[0];
             const reader = new FileReader();
             reader.onload = (event) => {
                 const workbook = XLSX.read(new Uint8Array(event.target.result), { type: 'array' });
                 masterDatabase = [];
+                let activeCount = 0;
+                let delistCount = 0;
                 const mappings = { "Active List ": "Active", "Delist ": "Delist", "Not for sale ": "NFS" };
+                
                 workbook.SheetNames.forEach(name => {
                     if (mappings[name]) {
                         const items = XLSX.utils.sheet_to_json(workbook.Sheets[name]).map(item => ({
@@ -180,14 +277,20 @@
                             searchKey: (item['Secondary Desc'] + ' ' + item['Material Description'] + ' ' + item['Material']).toLowerCase()
                         }));
                         masterDatabase.push(...items);
+                        if(mappings[name] === "Active") activeCount += items.length;
+                        if(mappings[name] === "Delist") delistCount += items.length;
                     }
                 });
+                
+                document.getElementById('stat-total').innerText = masterDatabase.length;
+                document.getElementById('stat-active').innerText = activeCount;
+                document.getElementById('stat-delist').innerText = delistCount;
                 document.getElementById('status-dot').className = 'w-3 h-3 rounded-full bg-green-500';
             };
             reader.readAsArrayBuffer(file);
         });
 
-        // Search Bar
+        // Search
         document.getElementById('product-search-input').addEventListener('input', (e) => {
             const q = e.target.value.toLowerCase();
             const results = document.getElementById('search-results');
@@ -197,7 +300,6 @@
             results.classList.remove('hidden');
         });
 
-        // Barcode FIX: Render after visibility
         function selectProduct(item) {
             document.getElementById('search-results').classList.add('hidden');
             document.getElementById('product-card').classList.remove('hidden');
@@ -205,14 +307,11 @@
             document.getElementById('view-title-en').innerText = item.desc_en;
             document.getElementById('view-code').innerText = item.material;
             document.getElementById('view-status').innerText = item.sheet;
-
             const cleanCode = item.material.replace(/[^a-zA-Z0-9]/g, "");
 
-            // التوقيت هو السر هنا: الانتظار قليلاً لضمان ظهور الـ SVG
             setTimeout(() => {
                 JsBarcode("#barcode-display", cleanCode, {
-                    format: "CODE128", width: 2, height: 60, displayValue: true,
-                    lineColor: "#000000", background: "#ffffff"
+                    format: "CODE128", width: 2, height: 60, displayValue: true, lineColor: "#000000", background: "#ffffff"
                 });
                 JsBarcode("#print-barcode", cleanCode, { format: "CODE128", width: 1.5, height: 40, displayValue: false });
                 document.getElementById('print-name-ar').innerText = item.desc_ar;
@@ -220,7 +319,7 @@
             }, 100);
         }
 
-        // Vision logic
+        // Vision logic (Gemini-3.6-flash)
         const video = document.getElementById('video-preview');
         document.getElementById('start-camera').onclick = async () => {
             video.srcObject = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
@@ -229,8 +328,7 @@
         document.getElementById('capture-ocr').onclick = async () => {
             const key = localStorage.getItem('gemini_api_key');
             if (!key) return alert("Key missing");
-            const loader = document.getElementById('ocr-loader');
-            loader.classList.remove('hidden');
+            document.getElementById('ocr-loader').classList.remove('hidden');
             
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth; canvas.height = video.videoHeight;
@@ -240,12 +338,11 @@
             try {
                 const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${key}`, {
                     method: 'POST',
-                    body: JSON.stringify({ contents: [{ parts: [{ text: "Product name only Arabic/English" }, { inline_data: { mime_type: "image/jpeg", data: base64 } }] }] })
+                    body: JSON.stringify({ contents: [{ parts: [{ text: "Extract product names only" }, { inline_data: { mime_type: "image/jpeg", data: base64 } }] }] })
                 });
                 const data = await res.json();
-                const text = data.candidates[0].content.parts[0].text;
-                
-                const tokens = text.toLowerCase().split(/\s+/).filter(t => t.length > 2);
+                const text = data.candidates[0].content.parts[0].text.toLowerCase();
+                const tokens = text.split(/\s+/).filter(t => t.length > 2);
                 const matches = masterDatabase.map(p => {
                     let s = 0; tokens.forEach(t => { if (p.searchKey.includes(t)) s++; });
                     return { ...p, s };
@@ -255,15 +352,18 @@
                     <div onclick='switchTab("search"); selectProduct(${JSON.stringify(m)})' class="p-4 bg-white dark:bg-darkCard rounded-xl shadow border-r-4 border-green-500 cursor-pointer text-right">
                         <b>${m.desc_ar}</b><br><small>${m.material}</small>
                     </div>`).join('');
-            } catch (err) { alert("Error"); } finally { loader.classList.add('hidden'); }
+            } catch (err) { alert("AI Error"); } finally { document.getElementById('ocr-loader').classList.add('hidden'); }
         };
 
         function switchTab(id) {
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             document.getElementById('tab-' + id).classList.add('active');
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active-tab'));
-            event.currentTarget.classList.add('active-tab');
+            const activeNav = document.getElementById('nav-' + id);
+            if(activeNav) activeNav.classList.add('active-tab');
         }
+
+        updateLanguage();
     </script>
 </body>
 </html>
