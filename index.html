@@ -80,7 +80,7 @@
                 <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
                     <div>
                         <p class="text-xs text-slate-400 font-semibold mb-1">حالة الأداء</p>
-                        <p class="text-sm font-bold text-emerald-600"><i class="fa-solid fa-bolt ml-1"></i> جاهز للعمل</p>
+                        <p class="text-sm font-bold text-emerald-600"><i class="fa-solid fa-bolt ml-1"></i> فورى ومباشر</p>
                     </div>
                     <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-xl">
                         <i class="fa-solid fa-gauge-high"></i>
@@ -119,10 +119,10 @@
 
                         <!-- Tab 2: Live Camera OCR Scan -->
                         <div id="tab-camera-content" class="hidden space-y-4 text-center">
-                            <div class="relative rounded-xl overflow-hidden bg-black max-w-md mx-auto aspect-video">
+                            <div class="relative rounded-xl overflow-hidden bg-black max-w-md mx-auto aspect-video shadow-lg">
                                 <video id="live-camera-feed" autoplay playsinline class="w-full h-full object-cover"></video>
                                 <div class="absolute inset-0 border-2 border-emerald-500/60 pointer-events-none rounded-xl flex items-center justify-center">
-                                    <span class="bg-black/70 text-white text-xs px-3 py-1 rounded-full">اجعل اسم المنتج واضحاً أمام الكاميرا</span>
+                                    <span class="bg-black/70 text-white text-xs px-3 py-1.5 rounded-full font-bold">وجه الكاميرا على اسم المنتج بوضوح</span>
                                 </div>
                             </div>
                             
@@ -133,22 +133,22 @@
 
                             <div class="flex justify-center gap-3">
                                 <button onclick="captureAndOCRScan()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3 rounded-xl shadow transition flex items-center space-x-2 space-x-reverse">
-                                    <i class="fa-solid fa-eye"></i>
-                                    <span>قراءة النص واستخراج المنتج الآن</span>
+                                    <i class="fa-solid fa-crosshairs"></i>
+                                    <span>التقاط النتيجة الآن</span>
                                 </button>
                                 <button onclick="stopLiveCamera()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-4 py-3 rounded-xl transition">
-                                    إيقاف
+                                    إيقاف الكاميرا
                                 </button>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Products Table Results (No Price Column) -->
+                    <!-- Products Table Results -->
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
                         <div class="flex justify-between items-center mb-4">
                             <h3 class="font-bold text-slate-800 flex items-center space-x-2 space-x-reverse">
                                 <i class="fa-solid fa-list text-indigo-600"></i>
-                                <span>نتائج المطابقة</span>
+                                <span>نتيجة المطابقة الفورية</span>
                             </h3>
                             <span id="results-count" class="text-xs bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full font-semibold">0 منتج</span>
                         </div>
@@ -172,7 +172,7 @@
 
                 </div>
 
-                <!-- Right Column: Barcode & Cashier Quick Card -->
+                <!-- Right Column: Barcode Card -->
                 <div class="space-y-6">
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 sticky top-6">
                         <h3 class="font-bold text-slate-800 mb-4 flex items-center space-x-2 space-x-reverse border-b pb-3">
@@ -462,7 +462,7 @@
             }
         }
 
-        // Live OCR Text Scanner from Camera Frame
+        // Smart Enhanced OCR Scanner from Camera Frame
         async function captureAndOCRScan() {
             const videoElement = document.getElementById('live-camera-feed');
             if (!cameraStream) {
@@ -475,14 +475,12 @@
             loadingDiv.classList.remove('hidden');
 
             try {
-                // Capture current frame from video to canvas
                 const canvas = document.createElement('canvas');
                 canvas.width = videoElement.videoWidth || 640;
                 canvas.height = videoElement.videoHeight || 480;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
 
-                // Run Tesseract OCR on the canvas image
                 const result = await Tesseract.recognize(canvas, 'ara+eng', {
                     logger: m => {
                         if (m.status === 'recognizing text') {
@@ -495,29 +493,45 @@
                 const extractedText = result.data.text.trim();
 
                 if (!extractedText) {
-                    alert('لم يتم العثور على نص واضح، حاول تقريب الكاميرا أكثر.');
+                    alert('لم يتم قراءة أي نص بوضوح، حاول تقريب الكاميرا أكثر أو تحسين الإضاءة.');
                     return;
                 }
 
-                // Match extracted text against product list
-                const normalizedOCR = normalizeText(extractedText);
-                const keywords = normalizedOCR.split(/[\s,\-\/\()]+/).filter(w => w.length >= 2);
-
-                if (keywords.length === 0) {
-                    alert('النص غير واضح، أعد المحاولة.');
-                    return;
+                // Smart Matching Algorithm
+                let bestMatch = null;
+                
+                // 1. Check if numbers (codes) exist in OCR text
+                const numbers = extractedText.match(/\d{4,}/g) || [];
+                if (numbers.length > 0) {
+                    for (let num of numbers) {
+                        bestMatch = allProducts.find(p => p.code.includes(num) || num.includes(p.code));
+                        if (bestMatch) break;
+                    }
                 }
 
-                const scoredProducts = allProducts.map(prod => {
-                    let score = 0;
-                    keywords.forEach(kw => {
-                        if (prod.searchString.includes(kw)) score += kw.length;
+                // 2. If no code found, search by smart keywords
+                if (!bestMatch) {
+                    const normalizedOCR = normalizeText(extractedText);
+                    const keywords = normalizedOCR.split(/[\s,\-\/\(\)\.\+\#\:]+/).filter(w => w.length >= 2);
+
+                    let bestScore = 0;
+                    allProducts.forEach(prod => {
+                        let score = 0;
+                        keywords.forEach(kw => {
+                            if (prod.searchString.includes(kw)) {
+                                score += kw.length;
+                            }
+                        });
+                        if (score > bestScore) {
+                            bestScore = score;
+                            bestMatch = prod;
+                        }
                     });
-                    return { product: prod, score: score };
-                });
 
-                scoredProducts.sort((a, b) => b.score - a.score);
-                const bestMatch = scoredProducts.length > 0 && scoredProducts[0].score > 0 ? scoredProducts[0].product : null;
+                    if (bestScore < 3) {
+                        bestMatch = null;
+                    }
+                }
 
                 if (bestMatch) {
                     selectProduct(bestMatch);
@@ -525,7 +539,7 @@
                     document.getElementById('search-input').value = bestMatch.name;
                     filterBySheet();
                 } else {
-                    alert('لم يتم العثور على منتج مطابق لهذا النص في الملف.');
+                    alert('لم يتم العثور على مطابقة دقيقة بالملف. جرب توجيه الكاميرا بدقة على اسم أو كود المنتج أو استخدم البحث النصي المباشر.');
                 }
 
             } catch (err) {
