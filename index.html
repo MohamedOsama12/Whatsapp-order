@@ -286,14 +286,32 @@
                     let row = rawData[i];
                     if (!row || row.length === 0) continue;
                     
+                    let codeVal = 'N/A';
+                    let nameVal = '';
+
+                    // Smart detection: Find which cell is the code (numbers) and which is the name (text)
+                    for (let cell of row) {
+                        let cellStr = String(cell || '').trim();
+                        if (!cellStr) continue;
+                        if (/^\d{3,}$/.test(cellStr) && codeVal === 'N/A') {
+                            codeVal = cellStr;
+                        } else if (/[a-zA-Zأ-ي]/.test(cellStr) && !nameVal) {
+                            nameVal = cellStr;
+                        }
+                    }
+
+                    // Fallbacks based on standard positions if smart detection misses
+                    if (codeVal === 'N/A') codeVal = String(row[0] || row[1] || 'N/A').trim();
+                    if (!nameVal) nameVal = String(row[1] || row[0] || '').trim();
+
                     let product = {
-                        code: String(row[0] || row[1] || 'N/A').trim(),
-                        name: String(row[1] || row[0] || '').trim(),
+                        code: codeVal,
+                        name: nameVal,
                         sheetName: sheetName,
                         searchString: normalizeText(row.map(cell => String(cell || '')).join(' ') + ' ' + sheetName)
                     };
                     
-                    if (product.name && product.name !== 'undefined' && product.name !== '') {
+                    if (product.code && product.code !== 'N/A') {
                         allProducts.push(product);
                     }
                 }
@@ -497,10 +515,7 @@
                     return;
                 }
 
-                // Smart Matching Algorithm
                 let bestMatch = null;
-                
-                // 1. Check if numbers (codes) exist in OCR text
                 const numbers = extractedText.match(/\d{4,}/g) || [];
                 if (numbers.length > 0) {
                     for (let num of numbers) {
@@ -509,7 +524,6 @@
                     }
                 }
 
-                // 2. If no code found, search by smart keywords
                 if (!bestMatch) {
                     const normalizedOCR = normalizeText(extractedText);
                     const keywords = normalizedOCR.split(/[\s,\-\/\(\)\.\+\#\:]+/).filter(w => w.length >= 2);
