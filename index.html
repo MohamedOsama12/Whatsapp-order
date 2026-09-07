@@ -50,9 +50,7 @@
         </div>
 
         <div class="flex items-center gap-2">
-            <!-- Language Toggle Button -->
             <button id="lang-toggle" class="p-2 rounded-xl bg-blue-100 dark:bg-slate-700 text-blue-600 dark:text-blue-400 font-bold text-xs">EN</button>
-            
             <button id="theme-toggle" class="p-2 rounded-xl bg-slate-200 dark:bg-slate-700">
                 <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
                 <svg id="theme-toggle-light-icon" class="hidden w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"></path></svg>
@@ -63,11 +61,11 @@
 
     <main class="p-4 max-w-4xl mx-auto">
         
-        <!-- SECTION 1: DATA (WITH RESTORED STATS) -->
+        <!-- SECTION 1: DATA -->
         <section id="tab-import" class="tab-content active">
-            <div class="bg-white dark:bg-darkCard p-6 rounded-2xl shadow-md border border-slate-100 dark:border-slate-800 mb-6">
+            <div class="bg-white dark:bg-darkCard p-6 rounded-2xl shadow-md border border-slate-100 dark:border-slate-800 mb-6 text-center">
                 <input type="file" id="excel-upload" class="hidden" accept=".xlsx, .xls">
-                <label for="excel-upload" class="cursor-pointer block text-center py-10 border-2 border-dashed border-blue-200 dark:border-slate-700 rounded-xl">
+                <label for="excel-upload" class="cursor-pointer block py-10 border-2 border-dashed border-blue-200 dark:border-slate-700 rounded-xl">
                     <div id="txt-upload-title" class="text-blue-600 font-bold mb-2 text-lg">تحميل ملف البيانات (Excel)</div>
                     <div class="text-slate-400 text-sm">Active, Delist, NFS</div>
                 </label>
@@ -108,17 +106,16 @@
 
             <div id="product-card" class="hidden bg-white dark:bg-darkCard rounded-3xl shadow-xl overflow-hidden p-6 border dark:border-slate-800 animate-fade-in">
                 <div class="space-y-4">
-                    <h2 id="view-title-ar" class="text-2xl font-bold"></h2>
-                    <p id="view-title-en" class="text-slate-400 italic"></p>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg"><span id="txt-label-code" class="text-xs text-slate-400 block">الكود</span><span id="view-code" class="font-bold"></span></div>
-                        <div class="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg"><span id="txt-label-status" class="text-xs text-slate-400 block">الحالة</span><span id="view-status" class="font-bold text-blue-500"></span></div>
-                    </div>
+                    <h2 id="view-title-ar" class="text-2xl font-bold text-right"></h2>
+                    <p id="view-title-en" class="text-slate-400 italic text-right"></p>
                     
+                    <!-- Dynamic Details Container -->
+                    <div id="dynamic-details" class="grid grid-cols-1 md:grid-cols-2 gap-2 text-right">
+                        <!-- Key-Value pairs will be injected here -->
+                    </div>
+
                     <div class="flex flex-col items-center justify-center py-6 bg-slate-100 dark:bg-slate-900/50 rounded-2xl">
-                        <div class="bg-white p-2 rounded-lg shadow-sm">
-                            <svg id="barcode-display"></svg>
-                        </div>
+                        <div class="bg-white p-2 rounded-lg shadow-sm"><svg id="barcode-display"></svg></div>
                         <button id="btn-print" onclick="window.print()" class="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-10 py-4 rounded-2xl font-bold w-full max-w-xs transition-all active:scale-95 shadow-lg">طباعة الملصق</button>
                     </div>
                 </div>
@@ -129,9 +126,8 @@
         <section id="tab-ocr" class="tab-content">
             <div class="bg-black rounded-2xl overflow-hidden relative aspect-video shadow-2xl mb-4 border-2 border-white dark:border-slate-800">
                 <video id="video-preview" class="w-full h-full object-cover" autoplay playsinline></video>
-                <div id="scan-line" class="absolute top-0 left-0 w-full h-1 bg-blue-500 shadow-[0_0_15px_blue] hidden"></div>
+                <div id="scan-line" class="absolute top-0 left-0 w-full h-1 bg-blue-500 hidden"></div>
             </div>
-            
             <div class="grid grid-cols-2 gap-4 mb-6">
                 <button id="start-camera" class="bg-slate-800 text-white p-4 rounded-xl font-bold text-sm">فتح الكاميرا</button>
                 <button id="capture-ocr" class="bg-blue-600 text-white p-4 rounded-xl font-bold text-sm">تحليل ذكي (Gemini)</button>
@@ -142,7 +138,7 @@
 
     </main>
 
-    <!-- Bottom Navigation (Mobile) -->
+    <!-- Bottom Navigation -->
     <div class="fixed bottom-0 left-0 right-0 glass border-t p-2 flex justify-around items-center lg:hidden z-50">
         <button onclick="switchTab('import')" id="nav-import" class="nav-btn flex flex-col items-center gap-1 p-2 active-tab">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
@@ -158,7 +154,7 @@
         </button>
     </div>
 
-    <!-- Hidden Print Section -->
+    <!-- Print Section -->
     <div id="printSection" class="hidden">
         <div style="font-size: 10pt; font-weight: bold; text-align: center;" id="print-name-ar"></div>
         <div style="font-size: 7pt; text-align: center;" id="print-name-en"></div>
@@ -170,51 +166,14 @@
         let currentLang = 'ar';
 
         const translations = {
-            ar: {
-                uploadTitle: "تحميل ملف البيانات (Excel)",
-                statsTitle: "الإحصائيات",
-                total: "إجمالي المنتجات",
-                active: "النشط (Active)",
-                delist: "الملغي (Delist)",
-                settings: "الإعدادات",
-                searchPlaceholder: "ابحث باسم المنتج أو الكود...",
-                labelCode: "الكود",
-                labelStatus: "الحالة",
-                btnPrint: "طباعة الملصق",
-                btnCamera: "فتح الكاميرا",
-                btnAnalyze: "تحليل ذكي (Gemini)",
-                loading: "جاري التحليل...",
-                navData: "البيانات",
-                navSearch: "البحث",
-                navVision: "الرؤية",
-                noMatch: "لم يتم العثور على تطابق"
-            },
-            en: {
-                uploadTitle: "Upload Data File (Excel)",
-                statsTitle: "Statistics",
-                total: "Total Products",
-                active: "Active",
-                delist: "Delisted",
-                settings: "Settings",
-                searchPlaceholder: "Search by name or code...",
-                labelCode: "Material Code",
-                labelStatus: "Status",
-                btnPrint: "Print Label",
-                btnCamera: "Open Camera",
-                btnAnalyze: "Smart Analysis",
-                loading: "Analyzing...",
-                navData: "Data",
-                navSearch: "Search",
-                navVision: "Vision",
-                noMatch: "No match found"
-            }
+            ar: { uploadTitle: "تحميل ملف البيانات (Excel)", statsTitle: "الإحصائيات", total: "إجمالي المنتجات", active: "النشط (Active)", delist: "الملغي (Delist)", settings: "الإعدادات", searchPlaceholder: "ابحث باسم المنتج أو الكود...", btnPrint: "طباعة الملصق", btnCamera: "فتح الكاميرا", btnAnalyze: "تحليل ذكي (Gemini)", loading: "جاري التحليل...", navData: "البيانات", navSearch: "البحث", navVision: "الرؤية" },
+            en: { uploadTitle: "Upload Data File (Excel)", statsTitle: "Statistics", total: "Total Products", active: "Active", delist: "Delisted", settings: "Settings", searchPlaceholder: "Search by name or code...", btnPrint: "Print Label", btnCamera: "Open Camera", btnAnalyze: "Smart Analysis", loading: "Analyzing...", navData: "Data", navSearch: "Search", navVision: "Vision" }
         };
 
         function updateLanguage() {
             const t = translations[currentLang];
             document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
             document.getElementById('lang-toggle').innerText = currentLang === 'ar' ? 'EN' : 'AR';
-            
             document.getElementById('txt-upload-title').innerText = t.uploadTitle;
             document.getElementById('txt-stats-title').innerText = t.statsTitle;
             document.getElementById('txt-stat-total').innerText = t.total;
@@ -222,31 +181,22 @@
             document.getElementById('txt-stat-delist').innerText = t.delist;
             document.getElementById('txt-settings-title').innerText = t.settings;
             document.getElementById('product-search-input').placeholder = t.searchPlaceholder;
-            document.getElementById('txt-label-code').innerText = t.labelCode;
-            document.getElementById('txt-label-status').innerText = t.labelStatus;
             document.getElementById('btn-print').innerText = t.btnPrint;
             document.getElementById('start-camera').innerText = t.btnCamera;
             document.getElementById('capture-ocr').innerText = t.btnAnalyze;
             document.getElementById('ocr-loader').innerText = t.loading;
-            
             document.querySelector('#nav-import span').innerText = t.navData;
             document.querySelector('#nav-search span').innerText = t.navSearch;
             document.querySelector('#nav-ocr span').innerText = t.navVision;
-            
             document.getElementById('product-search-input').style.textAlign = currentLang === 'ar' ? 'right' : 'left';
         }
 
-        document.getElementById('lang-toggle').onclick = () => {
-            currentLang = currentLang === 'ar' ? 'en' : 'ar';
-            updateLanguage();
-        };
+        document.getElementById('lang-toggle').onclick = () => { currentLang = currentLang === 'ar' ? 'en' : 'ar'; updateLanguage(); };
 
-        // API Key Init
         const keyField = document.getElementById('gemini-key');
         keyField.value = localStorage.getItem('gemini_api_key') || '';
         keyField.addEventListener('input', (e) => localStorage.setItem('gemini_api_key', e.target.value));
 
-        // Theme Toggle
         document.getElementById('theme-toggle').onclick = () => {
             document.documentElement.classList.toggle('dark');
             const isDark = document.documentElement.classList.contains('dark');
@@ -256,32 +206,29 @@
         };
         if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
 
-        // Excel Import (With Stats Calculation)
         document.getElementById('excel-upload').addEventListener('change', (e) => {
             const file = e.target.files[0];
             const reader = new FileReader();
             reader.onload = (event) => {
                 const workbook = XLSX.read(new Uint8Array(event.target.result), { type: 'array' });
                 masterDatabase = [];
-                let activeCount = 0;
-                let delistCount = 0;
+                let activeCount = 0, delistCount = 0;
                 const mappings = { "Active List ": "Active", "Delist ": "Delist", "Not for sale ": "NFS" };
-                
                 workbook.SheetNames.forEach(name => {
                     if (mappings[name]) {
                         const items = XLSX.utils.sheet_to_json(workbook.Sheets[name]).map(item => ({
+                            ...item, // Capture all raw columns from the sheet
                             material: String(item['Material'] || '').trim(),
                             desc_en: String(item['Material Description'] || ''),
                             desc_ar: String(item['Secondary Desc'] || ''),
                             sheet: mappings[name],
-                            searchKey: (item['Secondary Desc'] + ' ' + item['Material Description'] + ' ' + item['Material']).toLowerCase()
+                            searchKey: (String(item['Secondary Desc'] || '') + ' ' + String(item['Material Description'] || '') + ' ' + String(item['Material'] || '')).toLowerCase()
                         }));
                         masterDatabase.push(...items);
                         if(mappings[name] === "Active") activeCount += items.length;
                         if(mappings[name] === "Delist") delistCount += items.length;
                     }
                 });
-                
                 document.getElementById('stat-total').innerText = masterDatabase.length;
                 document.getElementById('stat-active').innerText = activeCount;
                 document.getElementById('stat-delist').innerText = delistCount;
@@ -290,13 +237,19 @@
             reader.readAsArrayBuffer(file);
         });
 
-        // Search
         document.getElementById('product-search-input').addEventListener('input', (e) => {
             const q = e.target.value.toLowerCase();
             const results = document.getElementById('search-results');
             if (q.length < 2) return results.classList.add('hidden');
-            const matches = masterDatabase.filter(i => i.searchKey.includes(q)).slice(0, 5);
-            results.innerHTML = matches.map(m => `<div onclick='selectProduct(${JSON.stringify(m)})' class="p-4 border-b dark:border-slate-700 cursor-pointer text-right"><b>${m.desc_ar}</b><br><small>${m.material}</small></div>`).join('');
+            const matches = masterDatabase.filter(i => i.searchKey.includes(q));
+            if (matches.length === 0) {
+                results.innerHTML = `<div class="p-4 text-center text-slate-400">No results</div>`;
+            } else {
+                results.innerHTML = matches.map(m => `
+                    <div onclick='selectProduct(${JSON.stringify(m)})' class="p-4 border-b dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer text-right">
+                        <b>${m.desc_ar}</b><br><small>${m.material}</small>
+                    </div>`).join('');
+            }
             results.classList.remove('hidden');
         });
 
@@ -305,36 +258,46 @@
             document.getElementById('product-card').classList.remove('hidden');
             document.getElementById('view-title-ar').innerText = item.desc_ar;
             document.getElementById('view-title-en').innerText = item.desc_en;
-            document.getElementById('view-code').innerText = item.material;
-            document.getElementById('view-status').innerText = item.sheet;
-            const cleanCode = item.material.replace(/[^a-zA-Z0-9]/g, "");
+            
+            // Injects all Excel columns dynamically
+            const detailsDiv = document.getElementById('dynamic-details');
+            detailsDiv.innerHTML = Object.entries(item)
+                .filter(([key]) => !['searchKey', 'desc_ar', 'desc_en', 'material', 'sheet'].includes(key)) 
+                .map(([key, value]) => `
+                    <div class="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50">
+                        <span class="text-[10px] text-slate-400 block uppercase font-bold">${key}</span>
+                        <span class="font-bold text-sm">${value}</span>
+                    </div>
+                `).join('') + `
+                <div class="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50">
+                    <span class="text-[10px] text-slate-400 block uppercase font-bold">Material</span>
+                    <span class="font-bold text-sm">${item.material}</span>
+                </div>
+                <div class="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50">
+                    <span class="text-[10px] text-slate-400 block uppercase font-bold">Sheet Status</span>
+                    <span class="font-bold text-sm text-blue-500">${item.sheet}</span>
+                </div>`;
 
+            const cleanCode = item.material.replace(/[^a-zA-Z0-9]/g, "");
             setTimeout(() => {
-                JsBarcode("#barcode-display", cleanCode, {
-                    format: "CODE128", width: 2, height: 60, displayValue: true, lineColor: "#000000", background: "#ffffff"
-                });
+                JsBarcode("#barcode-display", cleanCode, { format: "CODE128", width: 2, height: 60, displayValue: true, lineColor: "#000000", background: "#ffffff" });
                 JsBarcode("#print-barcode", cleanCode, { format: "CODE128", width: 1.5, height: 40, displayValue: false });
                 document.getElementById('print-name-ar').innerText = item.desc_ar;
                 document.getElementById('print-name-en').innerText = item.desc_en;
             }, 100);
         }
 
-        // Vision logic (Gemini-3.6-flash)
         const video = document.getElementById('video-preview');
-        document.getElementById('start-camera').onclick = async () => {
-            video.srcObject = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        };
+        document.getElementById('start-camera').onclick = async () => { video.srcObject = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }); };
 
         document.getElementById('capture-ocr').onclick = async () => {
             const key = localStorage.getItem('gemini_api_key');
             if (!key) return alert("Key missing");
             document.getElementById('ocr-loader').classList.remove('hidden');
-            
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth; canvas.height = video.videoHeight;
             canvas.getContext('2d').drawImage(video, 0, 0);
             const base64 = canvas.toDataURL('image/jpeg').split(',')[1];
-
             try {
                 const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${key}`, {
                     method: 'POST',
@@ -347,7 +310,6 @@
                     let s = 0; tokens.forEach(t => { if (p.searchKey.includes(t)) s++; });
                     return { ...p, s };
                 }).filter(p => p.s > 0).sort((a,b) => b.s - a.s).slice(0, 3);
-
                 document.getElementById('ocr-results').innerHTML = matches.map(m => `
                     <div onclick='switchTab("search"); selectProduct(${JSON.stringify(m)})' class="p-4 bg-white dark:bg-darkCard rounded-xl shadow border-r-4 border-green-500 cursor-pointer text-right">
                         <b>${m.desc_ar}</b><br><small>${m.material}</small>
@@ -362,7 +324,6 @@
             const activeNav = document.getElementById('nav-' + id);
             if(activeNav) activeNav.classList.add('active-tab');
         }
-
         updateLanguage();
     </script>
 </body>
