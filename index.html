@@ -12,6 +12,8 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <!-- JsBarcode for barcode generation -->
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <!-- Tesseract.js for Live Camera OCR -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap');
         body { font-family: 'Cairo', sans-serif; background-color: #f8fafc; }
@@ -21,7 +23,6 @@
 </head>
 <body class="min-h-screen text-slate-800 flex flex-col">
 
-    <!-- Main Container -->
     <main class="container mx-auto px-4 py-6 flex-grow">
 
         <!-- STEP 1: Upload Section -->
@@ -30,7 +31,7 @@
                 <i class="fa-solid fa-file-excel"></i>
             </div>
             <h2 class="text-2xl font-bold text-slate-800 mb-2">ارفع ملف المنتجات (Excel)</h2>
-            <p class="text-slate-500 mb-6 text-sm">قم برفع ملف الأكسيل وسيقوم النظام بقراءة والبحث في جميع الصفحات (Sheets) تلقائياً وبأقصى سرعة.</p>
+            <p class="text-slate-500 mb-6 text-sm">قم برفع ملف الأكسيل وسيقوم النظام بقراءة والبحث في جميع الصفحات تلقائياً.</p>
             
             <div id="drop-zone" class="border-2 border-dashed border-indigo-200 rounded-2xl p-8 bg-indigo-50/50 hover:bg-indigo-50 transition cursor-pointer relative">
                 <input type="file" id="excel-file-input" accept=".xlsx, .xls, .csv" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">
@@ -42,7 +43,7 @@
             </div>
         </section>
 
-        <!-- STEP 2: Dashboard Section (Hidden by default) -->
+        <!-- STEP 2: Dashboard Section -->
         <section id="dashboard-section" class="hidden space-y-6">
 
             <!-- Top Control Bar -->
@@ -79,7 +80,7 @@
                 <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
                     <div>
                         <p class="text-xs text-slate-400 font-semibold mb-1">حالة الأداء</p>
-                        <p class="text-sm font-bold text-emerald-600"><i class="fa-solid fa-bolt ml-1"></i> فوري ومباشر</p>
+                        <p class="text-sm font-bold text-emerald-600"><i class="fa-solid fa-bolt ml-1"></i> جاهز للعمل</p>
                     </div>
                     <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-xl">
                         <i class="fa-solid fa-gauge-high"></i>
@@ -90,7 +91,7 @@
             <!-- Search and Tools Workspace -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-                <!-- Left Column: Search & Quick Result (2 cols) -->
+                <!-- Left Column: Search & Camera OCR -->
                 <div class="lg:col-span-2 space-y-6">
                     
                     <!-- Search Tabs -->
@@ -102,7 +103,7 @@
                             </button>
                             <button onclick="switchTab('camera-search')" id="tab-camera-btn" class="px-4 py-2 rounded-xl font-bold text-sm bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center space-x-2 space-x-reverse">
                                 <i class="fa-solid fa-camera"></i>
-                                <span>الماسح الفوري بالكاميرا</span>
+                                <span>قراءة النص بالكاميرا (OCR)</span>
                             </button>
                         </div>
 
@@ -112,48 +113,53 @@
                                 <span class="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-slate-400">
                                     <i class="fa-solid fa-search"></i>
                                 </span>
-                                <input type="text" id="search-input" placeholder="اكتب اسم المنتج، الكود، أو الباركود للبحث الفوري..." class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3.5 pr-11 pl-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition shadow-inner">
+                                <input type="text" id="search-input" placeholder="اكتب اسم المنتج أو الكود للبحث الفوري..." class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3.5 pr-11 pl-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition shadow-inner">
                             </div>
                         </div>
 
-                        <!-- Tab 2: Direct Live Camera Scan (Replaced Tesseract) -->
+                        <!-- Tab 2: Live Camera OCR Scan -->
                         <div id="tab-camera-content" class="hidden space-y-4 text-center">
                             <div class="relative rounded-xl overflow-hidden bg-black max-w-md mx-auto aspect-video">
                                 <video id="live-camera-feed" autoplay playsinline class="w-full h-full object-cover"></video>
                                 <div class="absolute inset-0 border-2 border-emerald-500/60 pointer-events-none rounded-xl flex items-center justify-center">
-                                    <span class="bg-black/60 text-white text-xs px-3 py-1 rounded-full">وجه الكاميرا نحو الباركود أو المنتج</span>
+                                    <span class="bg-black/70 text-white text-xs px-3 py-1 rounded-full">اجعل اسم المنتج واضحاً أمام الكاميرا</span>
                                 </div>
                             </div>
+                            
+                            <div id="ocr-scan-loading" class="hidden py-2">
+                                <div class="loader w-6 h-6 border-2 border-indigo-500 rounded-full mx-auto mb-1"></div>
+                                <p id="ocr-progress-text" class="text-xs text-indigo-600 font-bold">جاري قراءة وتحليل النص...</p>
+                            </div>
+
                             <div class="flex justify-center gap-3">
-                                <button onclick="triggerInstantScan()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3 rounded-xl shadow transition flex items-center space-x-2 space-x-reverse">
-                                    <i class="fa-solid fa-crosshairs"></i>
-                                    <span>التقاط النتيجة الآن</span>
+                                <button onclick="captureAndOCRScan()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3 rounded-xl shadow transition flex items-center space-x-2 space-x-reverse">
+                                    <i class="fa-solid fa-eye"></i>
+                                    <span>قراءة النص واستخراج المنتج الآن</span>
                                 </button>
                                 <button onclick="stopLiveCamera()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-4 py-3 rounded-xl transition">
-                                    إيقاف الكاميرا
+                                    إيقاف
                                 </button>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Products Table Results (Minimal & Fast) -->
+                    <!-- Products Table Results (No Price Column) -->
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
                         <div class="flex justify-between items-center mb-4">
                             <h3 class="font-bold text-slate-800 flex items-center space-x-2 space-x-reverse">
                                 <i class="fa-solid fa-list text-indigo-600"></i>
-                                <span>نتيجة المطابقة الفورية</span>
+                                <span>نتائج المطابقة</span>
                             </h3>
                             <span id="results-count" class="text-xs bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full font-semibold">0 منتج</span>
                         </div>
 
-                        <div class="overflow-x-auto max-h-[300px] overflow-y-auto rounded-xl border border-slate-100">
+                        <div class="overflow-x-auto max-h-[350px] overflow-y-auto rounded-xl border border-slate-100">
                             <table class="w-full text-right border-collapse">
                                 <thead class="bg-slate-50 text-slate-600 text-xs uppercase sticky top-0 z-10 border-b border-slate-200">
                                     <tr>
                                         <th class="py-3 px-4 font-bold">كود المنتج</th>
                                         <th class="py-3 px-4 font-bold">اسم المنتج</th>
                                         <th class="py-3 px-4 font-bold">ورقة العمل</th>
-                                        <th class="py-3 px-4 font-bold">السعر</th>
                                         <th class="py-3 px-4 font-bold text-center">الإجراء</th>
                                     </tr>
                                 </thead>
@@ -166,7 +172,7 @@
 
                 </div>
 
-                <!-- Right Column: Barcode & Cashier Quick Card (1 col) -->
+                <!-- Right Column: Barcode & Cashier Quick Card -->
                 <div class="space-y-6">
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 sticky top-6">
                         <h3 class="font-bold text-slate-800 mb-4 flex items-center space-x-2 space-x-reverse border-b pb-3">
@@ -177,7 +183,7 @@
                         <div id="selected-product-card" class="text-center py-6">
                             <div id="no-selection" class="text-slate-400 py-12">
                                 <i class="fa-solid fa-hand-pointer text-4xl mb-3 text-indigo-300 animate-bounce"></i>
-                                <p class="text-sm font-medium">اختر منتجاً أو استخدم الكاميرا لعرض الباركود</p>
+                                <p class="text-sm font-medium">اختر منتجاً لعرض الباركود الخاص به</p>
                             </div>
 
                             <div id="active-selection" class="hidden space-y-4">
@@ -185,7 +191,6 @@
                                     <span id="sel-code-badge" class="inline-block bg-indigo-100 text-indigo-800 text-xs px-2.5 py-0.5 rounded font-mono font-bold mb-1"></span>
                                     <h4 id="sel-product-name" class="font-bold text-slate-900 text-base"></h4>
                                     <p id="sel-sheet-badge" class="text-xs text-indigo-600 font-semibold"></p>
-                                    <p id="sel-product-details" class="text-xs text-slate-500"></p>
                                 </div>
 
                                 <div class="bg-white p-6 rounded-xl border-2 border-dashed border-indigo-100 flex flex-col items-center justify-center shadow-inner">
@@ -208,7 +213,6 @@
 
     </main>
 
-    <!-- JavaScript Logic (Optimized & Direct) -->
     <script>
         let workbookData = null; 
         let allProducts = [];
@@ -285,7 +289,6 @@
                     let product = {
                         code: String(row[0] || row[1] || 'N/A').trim(),
                         name: String(row[1] || row[0] || '').trim(),
-                        price: row[2] !== undefined ? row[2] : (row[3] !== undefined ? row[3] : ''),
                         sheetName: sheetName,
                         searchString: normalizeText(row.map(cell => String(cell || '')).join(' ') + ' ' + sheetName)
                     };
@@ -333,18 +336,17 @@
                 .trim();
         }
 
-        // Render optimized list (Max 20 results to keep page lightning fast)
         function renderProducts(products) {
             const tbody = document.getElementById('products-table-body');
             tbody.innerHTML = '';
             document.getElementById('results-count').innerText = `${products.length} منتج`;
 
             if (products.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-slate-400">لا توجد منتجات مطابقة</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-slate-400">لا توجد منتجات مطابقة</td></tr>`;
                 return;
             }
 
-            const maxRender = 20;
+            const maxRender = 50;
             const displayList = products.slice(0, maxRender);
 
             displayList.forEach((prod) => {
@@ -356,7 +358,6 @@
                     <td class="py-3 px-4 font-mono font-bold text-indigo-600">${escapeHtml(prod.code)}</td>
                     <td class="py-3 px-4 font-semibold text-slate-800">${escapeHtml(prod.name)}</td>
                     <td class="py-3 px-4"><span class="bg-slate-100 text-slate-700 text-xs px-2.5 py-1 rounded-md font-medium">${escapeHtml(prod.sheetName)}</span></td>
-                    <td class="py-3 px-4 text-slate-500">${prod.price !== '' ? prod.price + ' ج.م' : 'غير متوفر'}</td>
                     <td class="py-3 px-4 text-center">
                         <button onclick="event.stopPropagation(); selectProduct(${JSON.stringify(prod).replace(/"/g, '&quot;')})" class="bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm">
                             <i class="fa-solid fa-barcode ml-1"></i> عرض
@@ -381,7 +382,6 @@
             document.getElementById('sel-code-badge').innerText = `كود: ${prod.code}`;
             document.getElementById('sel-product-name').innerText = prod.name;
             document.getElementById('sel-sheet-badge').innerText = `📄 ورقة العمل: ${prod.sheetName}`;
-            document.getElementById('sel-product-details').innerText = prod.price !== '' ? `السعر: ${prod.price} جنيه` : `بدون سعر محدد`;
             document.getElementById('barcode-text-val').innerText = prod.code;
 
             try {
@@ -404,7 +404,6 @@
             const productName = document.getElementById('sel-product-name').innerText;
             const productCode = document.getElementById('sel-code-badge').innerText;
             const sheetBadge = document.getElementById('sel-sheet-badge').innerText;
-            const productDetails = document.getElementById('sel-product-details').innerText;
 
             const printWindow = window.open('', '_blank');
             printWindow.document.write(`
@@ -415,7 +414,6 @@
                         <h2>${productName}</h2>
                         <p><strong>${productCode}</strong></p>
                         <p style="font-size: 12px; color: #666;">${sheetBadge}</p>
-                        <p>${productDetails}</p>
                         <div style="margin: 15px 0;">${svgElement}</div>
                     </div>
                     <script>window.onload = function() { window.print(); window.close(); }<\/script>
@@ -453,7 +451,7 @@
                 });
                 videoElement.srcObject = cameraStream;
             } catch (err) {
-                alert('تعذر فتح الكاميرا: تأكد من منح الصلاحيات للمتصفح.');
+                alert('تعذر فتح الكاميرا: تأكد من تشغيل الصفحة عبر سيرفر محلي أو إعطاء صلاحيات الكاميرا للمتصفح.');
             }
         }
 
@@ -464,37 +462,75 @@
             }
         }
 
-        // Instant scan: grabs current video frame, looks for barcode or matches first available product instantly
-        async function triggerInstantScan() {
+        // Live OCR Text Scanner from Camera Frame
+        async function captureAndOCRScan() {
             const videoElement = document.getElementById('live-camera-feed');
             if (!cameraStream) {
                 alert('الكاميرا غير متصلة!');
                 return;
             }
 
-            // Try native BarcodeDetector if supported by the browser for instant scanning
-            if ('BarcodeDetector' in window) {
-                try {
-                    const barcodeDetector = new BarcodeDetector({ formats: ['code_128', 'ean_13', 'ean_8', 'qr_code'] });
-                    const barcodes = await barcodeDetector.detect(videoElement);
-                    if (barcodes.length > 0) {
-                        const codeVal = barcodes[0].rawValue;
-                        const found = allProducts.find(p => p.code === codeVal);
-                        if (found) {
-                            selectProduct(found);
-                            switchTab('text-search');
-                            return;
+            const loadingDiv = document.getElementById('ocr-scan-loading');
+            const progressText = document.getElementById('ocr-progress-text');
+            loadingDiv.classList.remove('hidden');
+
+            try {
+                // Capture current frame from video to canvas
+                const canvas = document.createElement('canvas');
+                canvas.width = videoElement.videoWidth || 640;
+                canvas.height = videoElement.videoHeight || 480;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+
+                // Run Tesseract OCR on the canvas image
+                const result = await Tesseract.recognize(canvas, 'ara+eng', {
+                    logger: m => {
+                        if (m.status === 'recognizing text') {
+                            progressText.innerText = `جاري قراءة النص: ${Math.round(m.progress * 100)}%`;
                         }
                     }
-                } catch (e) {
-                    console.log("BarcodeDetector fallback active");
-                }
-            }
+                });
 
-            // Fallback: Pick the first product from current filtered list or prompt user
-            if (allProducts.length > 0) {
-                // Select a sample or prompt quick search
-                alert('قم بتوجيه الكاميرا بدقة أو استخدم البحث النصي السريع للحصول على نتيجة فورية.');
+                loadingDiv.classList.add('hidden');
+                const extractedText = result.data.text.trim();
+
+                if (!extractedText) {
+                    alert('لم يتم العثور على نص واضح، حاول تقريب الكاميرا أكثر.');
+                    return;
+                }
+
+                // Match extracted text against product list
+                const normalizedOCR = normalizeText(extractedText);
+                const keywords = normalizedOCR.split(/[\s,\-\/\()]+/).filter(w => w.length >= 2);
+
+                if (keywords.length === 0) {
+                    alert('النص غير واضح، أعد المحاولة.');
+                    return;
+                }
+
+                const scoredProducts = allProducts.map(prod => {
+                    let score = 0;
+                    keywords.forEach(kw => {
+                        if (prod.searchString.includes(kw)) score += kw.length;
+                    });
+                    return { product: prod, score: score };
+                });
+
+                scoredProducts.sort((a, b) => b.score - a.score);
+                const bestMatch = scoredProducts.length > 0 && scoredProducts[0].score > 0 ? scoredProducts[0].product : null;
+
+                if (bestMatch) {
+                    selectProduct(bestMatch);
+                    switchTab('text-search');
+                    document.getElementById('search-input').value = bestMatch.name;
+                    filterBySheet();
+                } else {
+                    alert('لم يتم العثور على منتج مطابق لهذا النص في الملف.');
+                }
+
+            } catch (err) {
+                loadingDiv.classList.add('hidden');
+                alert('حدث خطأ أثناء تحليل الصورة: ' + err.message);
             }
         }
     </script>
