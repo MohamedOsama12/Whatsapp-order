@@ -1,381 +1,140 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl" class="light">
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Retail Manager Pro</title>
-    
-    <!-- Libraries -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
-
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: { extend: { colors: { darkBg: '#0f172a', darkCard: '#1e293b' } } }
-        }
-    </script>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera Gemini HDR</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;600;700&display=swap');
-        body { font-family: 'Noto Sans Arabic', sans-serif; transition: background-color 0.3s ease; margin: 0; padding: 0; }
-        .glass { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(0,0,0,0.05); }
-        .dark .glass { background: rgba(30, 41, 59, 0.8); border-bottom: 1px solid rgba(255,255,255,0.05); }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
+        body { background: #111; color: #fff; padding: 15px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+        .container { width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 12px; }
         
-        @media print {
-            body * { visibility: hidden; }
-            #printSection, #printSection * { visibility: visible; }
-            #printSection { position: fixed; left: 0; top: 0; width: 40mm; height: 30mm; display: flex; flex-direction: column; align-items: center; justify-content: center; background: white !important; }
-            @page { size: 40mm 30mm; margin: 0; }
-        }
-
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        .active-tab { border-bottom: 4px solid #2563eb; color: #2563eb; }
-        .dark .active-tab { border-bottom: 4px solid #60a5fa; color: #60a5fa; }
+        input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; }
         
-        #barcode-display { background: white !important; padding: 10px; border-radius: 8px; min-width: 200px; }
+        .camera-box { position: relative; width: 100%; height: 350px; background: #000; border-radius: 12px; overflow: hidden; }
+        video { width: 100%; height: 100%; object-fit: cover; }
+        video.mirror { transform: scaleX(-1); }
+        
+        .controls { display: flex; justify-content: center; align-items: center; gap: 20px; }
+        .btn-switch { padding: 10px 16px; background: #333; color: #fff; border: none; border-radius: 20px; cursor: pointer; }
+        .btn-capture { width: 65px; height: 65px; border-radius: 50%; background: #e11d48; border: 4px solid #fff; cursor: pointer; }
+        
+        .gallery { width: 100%; display: flex; flex-direction: column; gap: 15px; margin-top: 10px; }
+        .card { background: #222; border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 8px; border: 1px solid #333; }
+        .card img { width: 100%; border-radius: 6px; }
+        .card .response { font-size: 0.85rem; color: #ddd; white-space: pre-wrap; background: #181818; padding: 8px; border-radius: 6px; max-height: 150px; overflow-y: auto; }
+        canvas { display: none; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-900 dark:bg-darkBg dark:text-slate-100 min-h-screen pb-24 lg:pb-0">
+<body>
 
-    <!-- Header Navigation -->
-    <nav class="glass sticky top-0 z-50 px-4 py-3 flex justify-between items-center shadow-sm">
-        <div class="flex items-center gap-2">
-            <div class="p-2 bg-blue-600 rounded-lg text-white">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
-            </div>
-            <h1 class="text-xl font-bold">Retail<span class="text-blue-600">Manager</span></h1>
-        </div>
+<div class="container">
+    <input type="password" id="apiKey" placeholder="ضع Gemini API Key هنا">
 
-        <div class="flex items-center gap-2">
-            <button id="lang-toggle" class="p-2 rounded-xl bg-blue-100 dark:bg-slate-700 text-blue-600 dark:text-blue-400 font-bold text-xs">EN</button>
-            <button id="theme-toggle" class="p-2 rounded-xl bg-slate-200 dark:bg-slate-700">
-                <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
-                <svg id="theme-toggle-light-icon" class="hidden w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"></path></svg>
-            </button>
-            <div id="status-dot" class="w-3 h-3 rounded-full bg-red-500"></div>
-        </div>
-    </nav>
-
-    <main class="p-4 max-w-4xl mx-auto">
-        
-        <!-- SECTION 1: DATA -->
-        <section id="tab-import" class="tab-content active">
-            <div class="bg-white dark:bg-darkCard p-6 rounded-2xl shadow-md border border-slate-100 dark:border-slate-800 mb-6 text-center">
-                <input type="file" id="excel-upload" class="hidden" accept=".xlsx, .xls">
-                <label for="excel-upload" class="cursor-pointer block py-10 border-2 border-dashed border-blue-200 dark:border-slate-700 rounded-xl">
-                    <div id="txt-upload-title" class="text-blue-600 font-bold mb-2 text-lg">تحميل ملف البيانات (Excel)</div>
-                    <div class="text-slate-400 text-sm">Active, Delist, NFS</div>
-                </label>
-            </div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="bg-white dark:bg-darkCard p-6 rounded-2xl shadow-md space-y-4">
-                    <h3 id="txt-stats-title" class="font-bold border-b dark:border-slate-700 pb-2">الإحصائيات</h3>
-                    <div class="flex justify-between items-center bg-slate-50 dark:bg-slate-800 p-3 rounded-xl">
-                        <span id="txt-stat-total">إجمالي المنتجات</span>
-                        <span id="stat-total" class="font-bold text-blue-600">0</span>
-                    </div>
-                    <div class="flex justify-between items-center bg-green-50 dark:bg-green-900/20 p-3 rounded-xl text-green-600">
-                        <span id="txt-stat-active">النشط (Active)</span>
-                        <span id="stat-active" class="font-bold">0</span>
-                    </div>
-                    <div class="flex justify-between items-center bg-orange-50 dark:bg-orange-900/20 p-3 rounded-xl text-orange-600">
-                        <span id="txt-stat-delist">الملغي (Delist)</span>
-                        <span id="stat-delist" class="font-bold">0</span>
-                    </div>
-                </div>
-
-                <div class="bg-white dark:bg-darkCard p-6 rounded-2xl shadow-md">
-                    <h3 id="txt-settings-title" class="font-bold border-b dark:border-slate-700 pb-2 mb-4">الإعدادات</h3>
-                    <label class="block text-xs font-bold mb-2 text-slate-400 uppercase">Gemini API Key</label>
-                    <input type="password" id="gemini-key" class="w-full p-3 rounded-lg bg-slate-100 dark:bg-slate-800 border-none outline-none focus:ring-2 ring-blue-500" placeholder="API Key...">
-                </div>
-            </div>
-        </section>
-
-        <!-- SECTION 2: SEARCH -->
-        <section id="tab-search" class="tab-content">
-            <div class="relative mb-6">
-                <input type="text" id="product-search-input" placeholder="ابحث باسم المنتج أو الكود..." 
-                       class="w-full h-14 px-4 rounded-xl bg-white dark:bg-darkCard shadow-lg outline-none text-lg border-2 border-transparent focus:border-blue-500">
-                <div id="search-results" class="absolute w-full mt-2 bg-white dark:bg-darkCard rounded-xl shadow-2xl max-h-60 overflow-y-auto hidden z-50"></div>
-            </div>
-
-            <div id="product-card" class="hidden bg-white dark:bg-darkCard rounded-3xl shadow-xl overflow-hidden p-6 border dark:border-slate-800 animate-fade-in">
-                <div class="space-y-4">
-                    <h2 id="view-title-ar" class="text-2xl font-bold text-right"></h2>
-                    <p id="view-title-en" class="text-slate-400 italic text-right"></p>
-                    
-                    <!-- Dynamic Details Container -->
-                    <div id="dynamic-details" class="grid grid-cols-1 md:grid-cols-2 gap-2 text-right">
-                        <!-- Key-Value pairs will be injected here -->
-                    </div>
-
-                    <div class="flex flex-col items-center justify-center py-6 bg-slate-100 dark:bg-slate-900/50 rounded-2xl">
-                        <div class="bg-white p-2 rounded-lg shadow-sm"><svg id="barcode-display"></svg></div>
-                        <button id="btn-print" onclick="window.print()" class="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-10 py-4 rounded-2xl font-bold w-full max-w-xs transition-all active:scale-95 shadow-lg">طباعة الملصق</button>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- SECTION 3: VISION -->
-        <section id="tab-ocr" class="tab-content">
-            <div class="bg-black rounded-2xl overflow-hidden relative aspect-video shadow-2xl mb-4 border-2 border-white dark:border-slate-800">
-                <video id="video-preview" class="w-full h-full object-cover" autoplay playsinline></video>
-                <div id="scan-line" class="absolute top-0 left-0 w-full h-1 bg-blue-500 hidden"></div>
-            </div>
-            <div class="grid grid-cols-2 gap-4 mb-6">
-                <button id="start-camera" class="bg-slate-800 text-white p-4 rounded-xl font-bold text-sm">فتح الكاميرا</button>
-                <button id="capture-ocr" class="bg-blue-600 text-white p-4 rounded-xl font-bold text-sm">تحليل ذكي (Gemini)</button>
-            </div>
-            <div id="ocr-loader" class="hidden text-center text-blue-500 font-bold py-4">جاري التحليل...</div>
-            <div id="ocr-results" class="space-y-3"></div>
-        </section>
-
-    </main>
-
-    <!-- Bottom Navigation -->
-    <div class="fixed bottom-0 left-0 right-0 glass border-t p-2 flex justify-around items-center lg:hidden z-50">
-        <button onclick="switchTab('import')" id="nav-import" class="nav-btn flex flex-col items-center gap-1 p-2 active-tab">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-            <span class="text-xs">البيانات</span>
-        </button>
-        <button onclick="switchTab('search')" id="nav-search" class="nav-btn flex flex-col items-center gap-1 p-2">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-            <span class="text-xs">البحث</span>
-        </button>
-        <button onclick="switchTab('ocr')" id="nav-ocr" class="nav-btn flex flex-col items-center gap-1 p-2">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path></svg>
-            <span class="text-xs">الرؤية</span>
-        </button>
+    <div class="camera-box">
+        <video id="video" autoplay playsinline muted></video>
     </div>
 
-    <!-- Print Section -->
-    <div id="printSection" class="hidden">
-        <div style="font-size: 10pt; font-weight: bold; text-align: center;" id="print-name-ar"></div>
-        <div style="font-size: 7pt; text-align: center;" id="print-name-en"></div>
-        <svg id="print-barcode"></svg>
+    <div class="controls">
+        <button class="btn-switch" id="switchBtn">🔄 تبديل الكاميرا</button>
+        <button class="btn-capture" id="captureBtn"></button>
     </div>
 
-    <script>
-        // --- Persistence Layer (IndexedDB) ---
-        const DB_NAME = "RetailInventoryDB";
-        const STORE_NAME = "InventoryStore";
+    <div class="gallery" id="gallery"></div>
+</div>
 
-        function openDB() {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open(DB_NAME, 1);
-                request.onupgradeneeded = (e) => {
-                    const db = e.target.result;
-                    if (!db.objectStoreNames.contains(STORE_NAME)) {
-                        db.createObjectStore(STORE_NAME);
-                    }
-                };
-                request.onsuccess = (e) => resolve(e.target.result);
-                request.onerror = (e) => reject(e.target.error);
+<canvas id="canvas"></canvas>
+
+<script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const captureBtn = document.getElementById('captureBtn');
+    const switchBtn = document.getElementById('switchBtn');
+    const apiKeyInput = document.getElementById('apiKey');
+    const gallery = document.getElementById('gallery');
+
+    let stream = null;
+    let facingMode = "environment";
+
+    if (localStorage.getItem("gemini_key")) {
+        apiKeyInput.value = localStorage.getItem("gemini_key");
+    }
+
+    async function initCamera() {
+        if (stream) stream.getTracks().forEach(t => t.stop());
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: facingMode },
+                audio: false
             });
+            video.srcObject = stream;
+            video.classList.toggle('mirror', facingMode === 'user');
+        } catch (e) {
+            alert("خطأ تشغيل الكاميرا: " + e.message);
         }
+    }
 
-        async function saveDatabase(data) {
-            const db = await openDB();
-            const tx = db.transaction(STORE_NAME, "readwrite");
-            tx.objectStore(STORE_NAME).put(data, "master_data");
-            return new Promise((resolve) => tx.oncomplete = resolve);
+    switchBtn.onclick = () => {
+        facingMode = facingMode === "user" ? "environment" : "user";
+        initCamera();
+    };
+
+    captureBtn.onclick = async () => {
+        const key = apiKeyInput.value.trim();
+        if (!key) return alert("يرجى إدخال API Key أولاً");
+        localStorage.setItem("gemini_key", key);
+
+        if (!video.videoWidth) return;
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+
+        if (facingMode === 'user') {
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
         }
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        async function loadDatabase() {
-            const db = await openDB();
-            return new Promise((resolve) => {
-                const request = db.transaction(STORE_NAME).objectStore(STORE_NAME).get("master_data");
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = () => resolve(null);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        const base64 = dataUrl.split(',')[1];
+
+        // عنصر العرض في المعرض
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+            <img src="${dataUrl}">
+            <div class="response">⏳ جاري الإرسال وتطبيق /HDR...</div>
+        `;
+        gallery.prepend(card);
+        const respBox = card.querySelector('.response');
+
+        // إرسال لـ Gemini
+        try {
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [
+                            { text: "/HDR" },
+                            { inline_data: { mime_type: "image/jpeg", data: base64 } }
+                        ]
+                    }]
+                })
             });
-        }
-
-        // --- Original Logic Starts ---
-        let masterDatabase = [];
-        let currentLang = 'ar';
-
-        const translations = {
-            ar: { uploadTitle: "تحميل ملف البيانات (Excel)", statsTitle: "الإحصائيات", total: "إجمالي المنتجات", active: "النشط (Active)", delist: "الملغي (Delist)", settings: "الإعدادات", searchPlaceholder: "ابحث باسم المنتج أو الكود...", btnPrint: "طباعة الملصق", btnCamera: "فتح الكاميرا", btnAnalyze: "تحليل ذكي (Gemini)", loading: "جاري التحليل...", navData: "البيانات", navSearch: "البحث", navVision: "الرؤية" },
-            en: { uploadTitle: "Upload Data File (Excel)", statsTitle: "Statistics", total: "Total Products", active: "Active", delist: "Delisted", settings: "Settings", searchPlaceholder: "Search by name or code...", btnPrint: "Print Label", btnCamera: "Open Camera", btnAnalyze: "Smart Analysis", loading: "Analyzing...", navData: "Data", navSearch: "Search", navVision: "Vision" }
-        };
-
-        function updateLanguage() {
-            const t = translations[currentLang];
-            document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
-            document.getElementById('lang-toggle').innerText = currentLang === 'ar' ? 'EN' : 'AR';
-            document.getElementById('txt-upload-title').innerText = t.uploadTitle;
-            document.getElementById('txt-stats-title').innerText = t.statsTitle;
-            document.getElementById('txt-stat-total').innerText = t.total;
-            document.getElementById('txt-stat-active').innerText = t.active;
-            document.getElementById('txt-stat-delist').innerText = t.delist;
-            document.getElementById('txt-settings-title').innerText = t.settings;
-            document.getElementById('product-search-input').placeholder = t.searchPlaceholder;
-            document.getElementById('btn-print').innerText = t.btnPrint;
-            document.getElementById('start-camera').innerText = t.btnCamera;
-            document.getElementById('capture-ocr').innerText = t.btnAnalyze;
-            document.getElementById('ocr-loader').innerText = t.loading;
-            document.querySelector('#nav-import span').innerText = t.navData;
-            document.querySelector('#nav-search span').innerText = t.navSearch;
-            document.querySelector('#nav-ocr span').innerText = t.navVision;
-            document.getElementById('product-search-input').style.textAlign = currentLang === 'ar' ? 'right' : 'left';
-        }
-
-        document.getElementById('lang-toggle').onclick = () => { currentLang = currentLang === 'ar' ? 'en' : 'ar'; updateLanguage(); };
-
-        const keyField = document.getElementById('gemini-key');
-        keyField.value = localStorage.getItem('gemini_api_key') || '';
-        keyField.addEventListener('input', (e) => localStorage.setItem('gemini_api_key', e.target.value));
-
-        document.getElementById('theme-toggle').onclick = () => {
-            document.documentElement.classList.toggle('dark');
-            const isDark = document.documentElement.classList.contains('dark');
-            localStorage.setItem('theme', isDark ? 'dark' : 'light');
-            document.getElementById('theme-toggle-dark-icon').classList.toggle('hidden', isDark);
-            document.getElementById('theme-toggle-light-icon').classList.toggle('hidden', !isDark);
-        };
-        if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
-
-        function updateStatsDisplay() {
-            let activeCount = 0, delistCount = 0;
-            masterDatabase.forEach(item => {
-                if(item.sheet === "Active") activeCount++;
-                if(item.sheet === "Delist") delistCount++;
-            });
-            document.getElementById('stat-total').innerText = masterDatabase.length;
-            document.getElementById('stat-active').innerText = activeCount;
-            document.getElementById('stat-delist').innerText = delistCount;
-            document.getElementById('status-dot').className = masterDatabase.length > 0 ? 'w-3 h-3 rounded-full bg-green-500' : 'w-3 h-3 rounded-full bg-red-500';
-        }
-
-        document.getElementById('excel-upload').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onload = async (event) => {
-                const workbook = XLSX.read(new Uint8Array(event.target.result), { type: 'array' });
-                masterDatabase = [];
-                const mappings = { "Active List ": "Active", "Delist ": "Delist", "Not for sale ": "NFS" };
-                workbook.SheetNames.forEach(name => {
-                    if (mappings[name]) {
-                        const items = XLSX.utils.sheet_to_json(workbook.Sheets[name]).map(item => ({
-                            ...item,
-                            material: String(item['Material'] || '').trim(),
-                            desc_en: String(item['Material Description'] || ''),
-                            desc_ar: String(item['Secondary Desc'] || ''),
-                            sheet: mappings[name],
-                            searchKey: (String(item['Secondary Desc'] || '') + ' ' + String(item['Material Description'] || '') + ' ' + String(item['Material'] || '')).toLowerCase()
-                        }));
-                        masterDatabase.push(...items);
-                    }
-                });
-                await saveDatabase(masterDatabase); // Save parsed data permanently
-                updateStatsDisplay();
-            };
-            reader.readAsArrayBuffer(file);
-        });
-
-        document.getElementById('product-search-input').addEventListener('input', (e) => {
-            const q = e.target.value.toLowerCase();
-            const results = document.getElementById('search-results');
-            if (q.length < 2) return results.classList.add('hidden');
-            const matches = masterDatabase.filter(i => i.searchKey.includes(q));
-            if (matches.length === 0) {
-                results.innerHTML = `<div class="p-4 text-center text-slate-400">No results</div>`;
-            } else {
-                results.innerHTML = matches.map(m => `
-                    <div onclick='selectProduct(${JSON.stringify(m)})' class="p-4 border-b dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer text-right">
-                        <b>${m.desc_ar}</b><br><small>${m.material}</small>
-                    </div>`).join('');
+            const data = await res.json();
+            if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
+                respBox.innerText = data.candidates[0].content.parts[0].text;
+            } else if (data.error) {
+                respBox.innerText = "❌ خطأ: " + data.error.message;
             }
-            results.classList.remove('hidden');
-        });
-
-        function selectProduct(item) {
-            document.getElementById('search-results').classList.add('hidden');
-            document.getElementById('product-card').classList.remove('hidden');
-            document.getElementById('view-title-ar').innerText = item.desc_ar;
-            document.getElementById('view-title-en').innerText = item.desc_en;
-            
-            const detailsDiv = document.getElementById('dynamic-details');
-            detailsDiv.innerHTML = Object.entries(item)
-                .filter(([key]) => !['searchKey', 'desc_ar', 'desc_en', 'material', 'sheet'].includes(key)) 
-                .map(([key, value]) => `
-                    <div class="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50">
-                        <span class="text-[10px] text-slate-400 block uppercase font-bold">${key}</span>
-                        <span class="font-bold text-sm">${value}</span>
-                    </div>
-                `).join('') + `
-                <div class="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50">
-                    <span class="text-[10px] text-slate-400 block uppercase font-bold">Material</span>
-                    <span class="font-bold text-sm">${item.material}</span>
-                </div>
-                <div class="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50">
-                    <span class="text-[10px] text-slate-400 block uppercase font-bold">Sheet Status</span>
-                    <span class="font-bold text-sm text-blue-500">${item.sheet}</span>
-                </div>`;
-
-            const cleanCode = item.material.replace(/[^a-zA-Z0-9]/g, "");
-            setTimeout(() => {
-                JsBarcode("#barcode-display", cleanCode, { format: "CODE128", width: 2, height: 60, displayValue: true, lineColor: "#000000", background: "#ffffff" });
-                JsBarcode("#print-barcode", cleanCode, { format: "CODE128", width: 1.5, height: 40, displayValue: false });
-                document.getElementById('print-name-ar').innerText = item.desc_ar;
-                document.getElementById('print-name-en').innerText = item.desc_en;
-            }, 100);
+        } catch (err) {
+            respBox.innerText = "❌ خطأ اتصال: " + err.message;
         }
+    };
 
-        const video = document.getElementById('video-preview');
-        document.getElementById('start-camera').onclick = async () => { video.srcObject = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }); };
-
-        document.getElementById('capture-ocr').onclick = async () => {
-            const key = localStorage.getItem('gemini_api_key');
-            if (!key) return alert("Key missing");
-            document.getElementById('ocr-loader').classList.remove('hidden');
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-            canvas.getContext('2d').drawImage(video, 0, 0);
-            const base64 = canvas.toDataURL('image/jpeg').split(',')[1];
-            try {
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${key}`, {
-                    method: 'POST',
-                    body: JSON.stringify({ contents: [{ parts: [{ text: "Extract product names only" }, { inline_data: { mime_type: "image/jpeg", data: base64 } }] }] })
-                });
-                const data = await res.json();
-                const text = data.candidates[0].content.parts[0].text.toLowerCase();
-                const tokens = text.split(/\s+/).filter(t => t.length > 2);
-                const matches = masterDatabase.map(p => {
-                    let s = 0; tokens.forEach(t => { if (p.searchKey.includes(t)) s++; });
-                    return { ...p, s };
-                }).filter(p => p.s > 0).sort((a,b) => b.s - a.s).slice(0, 3);
-                document.getElementById('ocr-results').innerHTML = matches.map(m => `
-                    <div onclick='switchTab("search"); selectProduct(${JSON.stringify(m)})' class="p-4 bg-white dark:bg-darkCard rounded-xl shadow border-r-4 border-green-500 cursor-pointer text-right">
-                        <b>${m.desc_ar}</b><br><small>${m.material}</small>
-                    </div>`).join('');
-            } catch (err) { alert("AI Error"); } finally { document.getElementById('ocr-loader').classList.add('hidden'); }
-        };
-
-        function switchTab(id) {
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.getElementById('tab-' + id).classList.add('active');
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active-tab'));
-            const activeNav = document.getElementById('nav-' + id);
-            if(activeNav) activeNav.classList.add('active-tab');
-        }
-
-        // --- Auto-Load Logic ---
-        window.addEventListener('load', async () => {
-            updateLanguage();
-            const savedData = await loadDatabase();
-            if (savedData && savedData.length > 0) {
-                masterDatabase = savedData;
-                updateStatsDisplay();
-                console.log("Database successfully recovered from memory.");
-            }
-        });
-    </script>
+    initCamera();
+</script>
 </body>
 </html>
