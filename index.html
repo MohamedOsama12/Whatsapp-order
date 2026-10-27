@@ -3,72 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Camera Gemini HDR</title>
+    <title>كاميرا HDR الذكية</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
-        body { background: #111; color: #fff; padding: 15px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
-        .container { width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 12px; }
-        
-        .inputs-row { display: flex; gap: 8px; width: 100%; }
-        input, select { padding: 10px; border-radius: 8px; border: 1px solid #444; background: #222; color: #fff; font-size: 0.9rem; }
-        input { flex: 2; }
-        select { flex: 1.2; }
+        body { background: #0f172a; color: #fff; padding: 15px; display: flex; flex-direction: column; align-items: center; }
+        .container { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 12px; }
         
         .camera-box { position: relative; width: 100%; height: 350px; background: #000; border-radius: 12px; overflow: hidden; }
         video { width: 100%; height: 100%; object-fit: cover; }
         video.mirror { transform: scaleX(-1); }
         
         .controls { display: flex; justify-content: center; align-items: center; gap: 20px; }
-        .btn-switch { padding: 10px 16px; background: #333; color: #fff; border: none; border-radius: 20px; cursor: pointer; }
-        .btn-capture { width: 65px; height: 65px; border-radius: 50%; background: #e11d48; border: 4px solid #fff; cursor: pointer; }
+        .btn-switch { padding: 10px 16px; background: #334155; color: #fff; border: none; border-radius: 20px; cursor: pointer; }
+        .btn-capture { width: 65px; height: 65px; border-radius: 50%; background: #ef4444; border: 4px solid #fff; cursor: pointer; box-shadow: 0 0 15px rgba(239,68,68,0.5); }
         
         .gallery { width: 100%; display: flex; flex-direction: column; gap: 15px; margin-top: 10px; }
-        .card { background: #222; border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 8px; border: 1px solid #333; }
+        .card { background: #1e293b; border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 8px; border: 1px solid #334155; }
+        .badge { align-self: flex-start; background: #0284c7; color: #fff; padding: 3px 8px; border-radius: 5px; font-size: 0.75rem; font-weight: bold; }
         .card img { width: 100%; border-radius: 6px; }
-        .card .response { font-size: 0.85rem; color: #ddd; white-space: pre-wrap; background: #181818; padding: 8px; border-radius: 6px; max-height: 150px; overflow-y: auto; }
+        .btn-download { background: #10b981; color: #fff; text-align: center; padding: 8px; border-radius: 6px; text-decoration: none; font-size: 0.85rem; font-weight: bold; }
+        
         canvas { display: none; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="inputs-row">
-        <input type="password" id="apiKey" placeholder="ضع Gemini API Key هنا">
-        <select id="modelSelect">
-            <option value="gemini-3.6-flash">gemini-3.6-flash</option>
-            <option value="gemini-flash-latest">الأحدث تلقائياً (Latest)</option>
-        </select>
-    </div>
-
     <div class="camera-box">
         <video id="video" autoplay playsinline muted></video>
     </div>
 
     <div class="controls">
         <button class="btn-switch" id="switchBtn">🔄 تبديل الكاميرا</button>
-        <button class="btn-capture" id="captureBtn"></button>
+        <button class="btn-capture" id="captureBtn" title="التقاط وتطبيق HDR"></button>
     </div>
 
     <div class="gallery" id="gallery"></div>
 </div>
 
-<canvas id="canvas"></canvas>
+<canvas id="tempCanvas"></canvas>
+<canvas id="hdrCanvas"></canvas>
 
 <script>
     const video = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
+    const tempCanvas = document.getElementById('tempCanvas');
+    const hdrCanvas = document.getElementById('hdrCanvas');
     const captureBtn = document.getElementById('captureBtn');
     const switchBtn = document.getElementById('switchBtn');
-    const apiKeyInput = document.getElementById('apiKey');
-    const modelSelect = document.getElementById('modelSelect');
     const gallery = document.getElementById('gallery');
 
     let stream = null;
     let facingMode = "environment";
-
-    if (localStorage.getItem("gemini_key")) {
-        apiKeyInput.value = localStorage.getItem("gemini_key");
-    }
 
     async function initCamera() {
         if (stream) stream.getTracks().forEach(t => t.stop());
@@ -80,7 +65,7 @@
             video.srcObject = stream;
             video.classList.toggle('mirror', facingMode === 'user');
         } catch (e) {
-            alert("خطأ تشغيل الكاميرا: " + e.message);
+            alert("تعذر تشغيل الكاميرا: " + e.message);
         }
     }
 
@@ -89,62 +74,77 @@
         initCamera();
     };
 
-    captureBtn.onclick = async () => {
-        const key = apiKeyInput.value.trim();
-        const selectedModel = modelSelect.value;
-        if (!key) return alert("يرجى إدخال API Key أولاً");
-        localStorage.setItem("gemini_key", key);
+    // معالجة بكسلات الصورة لتطبيق خوارزمية الـ HDR الحقيقية
+    function applyHDR(ctx, width, height) {
+        const imgData = ctx.getImageData(0, 0, width, height);
+        const d = imgData.data;
 
+        for (let i = 0; i < d.length; i += 4) {
+            let r = d[i], g = d[i + 1], b = d[i + 2];
+
+            // 1. تفتيح الظلال وحفظ الإضاءة العالية (Tone-Mapping S-Curve)
+            r = Math.pow(r / 255, 0.85) * 255;
+            g = Math.pow(g / 255, 0.85) * 255;
+            b = Math.pow(b / 255, 0.85) * 255;
+
+            // 2. زيادة التباين الموضعي (Contrast Boost)
+            r = (r - 128) * 1.25 + 128;
+            g = (g - 128) * 1.25 + 128;
+            b = (b - 128) * 1.25 + 128;
+
+            // 3. تعزيز تشبع ألوان HDR (Vibrance / Saturation)
+            let gray = 0.299 * r + 0.587 * g + 0.114 * b;
+            r = gray + (r - gray) * 1.35;
+            g = gray + (g - gray) * 1.35;
+            b = gray + (b - gray) * 1.35;
+
+            // حفظ الحدود (0 - 255)
+            d[i]     = Math.min(255, Math.max(0, r));
+            d[i + 1] = Math.min(255, Math.max(0, g));
+            d[i + 2] = Math.min(255, Math.max(0, b));
+        }
+
+        ctx.putImageData(imgData, 0, 0);
+    }
+
+    captureBtn.onclick = () => {
         if (!video.videoWidth) return;
 
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const ctx = canvas.getContext('2d');
+        const w = video.videoWidth;
+        const h = video.videoHeight;
+
+        tempCanvas.width = w;
+        tempCanvas.height = h;
+        const tCtx = tempCanvas.getContext('2d');
 
         if (facingMode === 'user') {
-            ctx.translate(canvas.width, 0);
-            ctx.scale(-1, 1);
+            tCtx.translate(w, 0);
+            tCtx.scale(-1, 1);
         }
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        tCtx.drawImage(video, 0, 0, w, h);
 
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-        const base64 = dataUrl.split(',')[1];
+        hdrCanvas.width = w;
+        hdrCanvas.height = h;
+        const hCtx = hdrCanvas.getContext('2d');
 
+        // تطبيق حدة ووضوح (Sharpening / Clarity Filter)
+        hCtx.filter = 'contrast(110%) brightness(102%)';
+        hCtx.drawImage(tempCanvas, 0, 0, w, h);
+
+        // تطبيق خوارزمية الـ HDR
+        applyHDR(hCtx, w, h);
+
+        const hdrImageURL = hdrCanvas.toDataURL('image/jpeg', 0.95);
+
+        // إضافة الصورة للمعرض
         const card = document.createElement('div');
         card.className = 'card';
         card.innerHTML = `
-            <img src="${dataUrl}">
-            <div class="response">⏳ جاري الإرسال لـ (${selectedModel}) وتطبيق /HDR...</div>
+            <span class="badge">تم تطبيق فلتر /HDR ✓</span>
+            <img src="${hdrImageURL}">
+            <a class="btn-download" href="${hdrImageURL}" download="HDR_Photo_${Date.now()}.jpg">📥 تحميل الصورة</a>
         `;
         gallery.prepend(card);
-        const respBox = card.querySelector('.response');
-
-        try {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${key}`;
-            const res = await fetch(url, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    contents: [{
-                        parts: [
-                            { text: "/HDR" },
-                            { inline_data: { mime_type: "image/jpeg", data: base64 } }
-                        ]
-                    }]
-                })
-            });
-
-            const data = await res.json();
-            if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
-                respBox.innerText = data.candidates[0].content.parts[0].text;
-            } else if (data.error) {
-                respBox.innerText = "❌ خطأ API: " + data.error.message;
-            } else {
-                respBox.innerText = "لم يتم استلام نص استجابة.";
-            }
-        } catch (err) {
-            respBox.innerText = "❌ خطأ اتصال: " + err.message;
-        }
     };
 
     initCamera();
